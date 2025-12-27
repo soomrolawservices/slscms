@@ -45,7 +45,7 @@ const teamNavItems = [
 ];
 
 export function AppSidebar() {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, profile, isAdmin, logout } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -98,7 +98,7 @@ export function AppSidebar() {
       <div className="p-4 border-t-2 border-border">
         {!collapsed && (
           <div className="mb-3">
-            <p className="text-sm font-medium truncate">{user?.name}</p>
+            <p className="text-sm font-medium truncate">{profile?.name}</p>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
         )}

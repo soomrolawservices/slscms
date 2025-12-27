@@ -20,7 +20,24 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      const { error } = await login(email, password);
+      
+      if (error) {
+        let errorMessage = 'Invalid email or password.';
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Please confirm your email before logging in.';
+        }
+        
+        toast({
+          title: 'Login failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       navigate('/dashboard');
       toast({
         title: 'Welcome back!',
@@ -29,7 +46,7 @@ export default function Login() {
     } catch (error) {
       toast({
         title: 'Login failed',
-        description: 'Invalid email or password. Try admin@legalflow.com / password',
+        description: 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -101,17 +118,6 @@ export default function Login() {
           </CardFooter>
         </form>
       </Card>
-
-      {/* Demo credentials hint */}
-      <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto">
-        <div className="bg-muted border-2 border-border p-3 text-sm">
-          <p className="font-medium mb-1">Demo Credentials:</p>
-          <p className="text-muted-foreground font-mono text-xs">
-            admin@legalflow.com / password<br />
-            team@legalflow.com / password
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

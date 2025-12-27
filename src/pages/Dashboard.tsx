@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { format, formatDistanceToNow } from 'date-fns';
 
 export default function Dashboard() {
-  const { user, isAdmin } = useAuth();
+  const { profile, isAdmin } = useAuth();
 
   const totalClients = mockClients.length;
   const activeCases = mockCases.filter((c) => c.status !== 'closed' && c.status !== 'archived').length;
@@ -28,7 +28,7 @@ export default function Dashboard() {
             {isAdmin ? 'Admin Dashboard' : 'My Dashboard'}
           </h1>
           <p className="text-muted-foreground">
-            Welcome back, {user?.name}
+            Welcome back, {profile?.name}
           </p>
         </div>
       </div>

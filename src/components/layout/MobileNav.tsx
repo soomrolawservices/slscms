@@ -35,7 +35,7 @@ const allNavItems = [
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
-  const { user, logout, isAdmin } = useAuth();
+  const { user, profile, logout, isAdmin } = useAuth();
 
   return (
     <>
@@ -75,7 +75,7 @@ export function MobileNav() {
               </nav>
 
               <div className="pt-4 border-t-2 border-border">
-                <p className="text-sm font-medium">{user?.name}</p>
+                <p className="text-sm font-medium">{profile?.name}</p>
                 <p className="text-xs text-muted-foreground mb-4">{user?.email}</p>
                 <Button variant="outline" className="w-full" onClick={logout}>
                   Logout
