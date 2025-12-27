@@ -1,0 +1,197 @@
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
+
+export default function Settings() {
+  const { user, isAdmin } = useAuth();
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+  const handlePasswordChange = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    toast({
+      title: 'Password updated',
+      description: 'Your password has been changed successfully.',
+    });
+  };
+
+  const handleDropdownSave = () => {
+    toast({
+      title: 'Dropdowns updated',
+      description: 'Dropdown options have been saved.',
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
+          Settings
+        </h1>
+        <p className="text-muted-foreground">
+          Manage your account and application settings
+        </p>
+      </div>
+
+      <Tabs defaultValue="account" className="space-y-6">
+        <TabsList className="border-2 border-border">
+          <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          {isAdmin && <TabsTrigger value="dropdowns">Dropdowns</TabsTrigger>}
+        </TabsList>
+
+        {/* Account Settings */}
+        <TabsContent value="account">
+          <Card className="border-2 border-border">
+            <CardHeader className="border-b-2 border-border">
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>
+                Update your account details
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid gap-4 max-w-md">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" defaultValue={user?.name} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" defaultValue={user?.email} disabled />
+                  <p className="text-xs text-muted-foreground">
+                    Email cannot be changed
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" type="tel" defaultValue={user?.phone} />
+                </div>
+                <Button className="w-fit">Save Changes</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Security Settings */}
+        <TabsContent value="security" className="space-y-6">
+          <Card className="border-2 border-border">
+            <CardHeader className="border-b-2 border-border">
+              <CardTitle>Change Password</CardTitle>
+              <CardDescription>
+                Update your password to keep your account secure
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <form onSubmit={handlePasswordChange} className="grid gap-4 max-w-md">
+                <div className="grid gap-2">
+                  <Label htmlFor="current">Current Password</Label>
+                  <Input id="current" type="password" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="new">New Password</Label>
+                  <Input id="new" type="password" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="confirm">Confirm New Password</Label>
+                  <Input id="confirm" type="password" required />
+                </div>
+                <Button type="submit" className="w-fit">Update Password</Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 border-border">
+            <CardHeader className="border-b-2 border-border">
+              <CardTitle>Two-Factor Authentication</CardTitle>
+              <CardDescription>
+                Add an extra layer of security to your account
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between max-w-md">
+                <div>
+                  <p className="font-medium">Enable 2FA</p>
+                  <p className="text-sm text-muted-foreground">
+                    Use an authenticator app for additional security
+                  </p>
+                </div>
+                <Switch
+                  checked={twoFactorEnabled}
+                  onCheckedChange={setTwoFactorEnabled}
+                />
+              </div>
+              {twoFactorEnabled && (
+                <div className="mt-4 p-4 bg-muted border-2 border-border max-w-md">
+                  <p className="text-sm font-medium mb-2">Setup Instructions</p>
+                  <p className="text-sm text-muted-foreground">
+                    Scan the QR code with your authenticator app to complete setup.
+                    (This would show a QR code in a real implementation)
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Dropdown Editor - Admin Only */}
+        {isAdmin && (
+          <TabsContent value="dropdowns">
+            <Card className="border-2 border-border">
+              <CardHeader className="border-b-2 border-border">
+                <CardTitle>Dropdown Options Editor</CardTitle>
+                <CardDescription>
+                  Manage dropdown options used throughout the application
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                <div className="grid gap-4 max-w-lg">
+                  <div className="grid gap-2">
+                    <Label>Case Types</Label>
+                    <Input defaultValue="Civil, Criminal, Family, Corporate, Property, Immigration" />
+                    <p className="text-xs text-muted-foreground">
+                      Comma-separated list of case types
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Client Regions</Label>
+                    <Input defaultValue="North, South, East, West, Central" />
+                    <p className="text-xs text-muted-foreground">
+                      Comma-separated list of regions
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Document Types</Label>
+                    <Input defaultValue="Contract, Agreement, Court Filing, Evidence, ID Document, Certificate" />
+                    <p className="text-xs text-muted-foreground">
+                      Comma-separated list of document types
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Expense Categories</Label>
+                    <Input defaultValue="Travel, Office Supplies, Court Fees, Consultation, Software, Other" />
+                    <p className="text-xs text-muted-foreground">
+                      Comma-separated list of expense categories
+                    </p>
+                  </div>
+
+                  <Button onClick={handleDropdownSave} className="w-fit">
+                    Save Dropdown Options
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>
+  );
+}
