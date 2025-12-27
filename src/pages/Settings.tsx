@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 export default function Settings() {
-  const { user, isAdmin } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   const handlePasswordChange = (e: React.FormEvent<HTMLFormElement>) => {
@@ -59,7 +59,7 @@ export default function Settings() {
               <div className="grid gap-4 max-w-md">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" defaultValue={user?.name} />
+                  <Input id="name" defaultValue={profile?.name} />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>

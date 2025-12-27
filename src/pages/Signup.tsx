@@ -1,30 +1,100 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { Scale, CheckCircle } from 'lucide-react';
 
 export default function Signup() {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    cnic: '',
+    password: '',
+    confirmPassword: '',
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const navigate = useNavigate();
+  const { signup } = useAuth();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.id]: e.target.value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: 'Passwords do not match',
+        description: 'Please make sure your passwords match.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate password strength
+    if (formData.password.length < 6) {
+      toast({
+        title: 'Password too short',
+        description: 'Password must be at least 6 characters long.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate signup
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsLoading(false);
-    setIsSubmitted(true);
-    toast({
-      title: 'Registration submitted',
-      description: 'Your request is pending admin approval.',
-    });
+    try {
+      const { error } = await signup(
+        formData.email,
+        formData.password,
+        {
+          name: `${formData.firstName} ${formData.lastName}`,
+          phone: formData.phone,
+          cnic: formData.cnic,
+        }
+      );
+
+      if (error) {
+        let errorMessage = 'Registration failed. Please try again.';
+        if (error.message.includes('already registered')) {
+          errorMessage = 'This email is already registered. Please sign in instead.';
+        } else if (error.message.includes('valid email')) {
+          errorMessage = 'Please enter a valid email address.';
+        }
+        
+        toast({
+          title: 'Registration failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsSubmitted(true);
+      toast({
+        title: 'Registration submitted',
+        description: 'Your request is pending admin approval.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Registration failed',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSubmitted) {
@@ -49,7 +119,7 @@ export default function Signup() {
               </p>
             </div>
             <p className="text-sm text-muted-foreground">
-              You will receive an email notification once your account has been approved.
+              You will be able to log in once your account has been approved.
             </p>
           </CardContent>
           <CardFooter className="border-t-2 border-border pt-6">
@@ -83,32 +153,71 @@ export default function Signup() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" required />
+                <Input 
+                  id="firstName" 
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  required 
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" required />
+                <Input 
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  required 
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" required />
+              <Input 
+                id="email" 
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                required 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" type="tel" required />
+              <Input 
+                id="phone" 
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                required 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="cnic">CNIC / ID Number</Label>
-              <Input id="cnic" required />
+              <Input 
+                id="cnic"
+                value={formData.cnic}
+                onChange={handleChange}
+                required 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required />
+              <Input 
+                id="password" 
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                required 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input id="confirmPassword" type="password" required />
+              <Input 
+                id="confirmPassword" 
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required 
+              />
             </div>
 
             <div className="bg-muted p-3 border-2 border-border">
