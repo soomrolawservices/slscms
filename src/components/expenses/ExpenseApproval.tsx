@@ -20,6 +20,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ExpenseData, useUpdateExpense } from '@/hooks/useExpenses';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
@@ -50,11 +51,22 @@ export function ExpenseApproval({ expenses, isLoading }: ExpenseApprovalProps) {
 
   const pendingExpenses = expenses.filter(e => e.status === 'pending');
 
+  const sendNotification = async (expenseId: string, action: 'approved' | 'rejected', reason?: string) => {
+    try {
+      await supabase.functions.invoke('expense-notification', {
+        body: { expenseId, action, reason },
+      });
+    } catch (error) {
+      console.error('Failed to send notification:', error);
+    }
+  };
+
   const handleApprove = async (expense: ExpenseData) => {
     await updateExpense.mutateAsync({
       id: expense.id,
       status: 'approved',
     });
+    await sendNotification(expense.id, 'approved');
     toast({ title: 'Expense approved' });
   };
 
@@ -70,6 +82,7 @@ export function ExpenseApproval({ expenses, isLoading }: ExpenseApprovalProps) {
       id: selectedExpense.id,
       status: 'rejected',
     });
+    await sendNotification(selectedExpense.id, 'rejected', rejectReason);
     toast({ title: 'Expense rejected' });
     setIsRejectOpen(false);
     setSelectedExpense(null);

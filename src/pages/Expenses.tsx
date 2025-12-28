@@ -25,6 +25,7 @@ import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, useU
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { ExpenseReports } from '@/components/expenses/ExpenseReports';
 import { ExpenseApproval } from '@/components/expenses/ExpenseApproval';
+import { ExpenseBudgetManager } from '@/components/expenses/ExpenseBudgetManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 
@@ -244,7 +245,12 @@ export default function Expenses() {
         </div>
       </div>
 
-      {viewMode === 'reports' && <ExpenseReports expenses={expenses} />}
+      {viewMode === 'reports' && (
+        <div className="space-y-8">
+          <ExpenseBudgetManager expenses={expenses} />
+          <ExpenseReports expenses={expenses} />
+        </div>
+      )}
 
       {viewMode === 'approval' && isAdmin && (
         <ExpenseApproval expenses={expenses} isLoading={isLoading} />
@@ -256,15 +262,15 @@ export default function Expenses() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-card border-2 border-border rounded-lg p-4">
               <p className="text-sm text-muted-foreground">Total Expenses</p>
-              <p className="text-2xl font-bold">${totalExpenses.toLocaleString()}</p>
+              <p className="text-2xl font-bold">PKR {totalExpenses.toLocaleString()}</p>
             </div>
             <div className="bg-card border-2 border-border rounded-lg p-4">
               <p className="text-sm text-muted-foreground">Pending Approval</p>
-              <p className="text-2xl font-bold text-yellow-600">${pendingExpenses.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-yellow-600">PKR {pendingExpenses.toLocaleString()}</p>
             </div>
             <div className="bg-card border-2 border-border rounded-lg p-4">
               <p className="text-sm text-muted-foreground">Approved</p>
-              <p className="text-2xl font-bold text-green-600">${approvedExpenses.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-green-600">PKR {approvedExpenses.toLocaleString()}</p>
             </div>
           </div>
 
