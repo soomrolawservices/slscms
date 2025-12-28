@@ -85,13 +85,13 @@ export function ClientAppointmentBooking() {
           time: formData.time,
           type: formData.type,
           topic: formData.topic,
-          status: 'scheduled',
+          status: 'pending', // Pending approval from team member
           client_id: client?.id,
           client_name: client?.name || profile?.name,
           client_email: client?.email || profile?.email,
           client_phone: client?.phone || profile?.phone,
           created_by: user?.id,
-          assigned_to: null, // Admin will assign
+          assigned_to: null, // Team member will be assigned after approval
         });
 
       if (error) throw error;

@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { CheckCircle, User } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
+import { useSignupSettings } from '@/hooks/useSignupSettings';
 
 export default function ClientSignup() {
   const [formData, setFormData] = useState({
@@ -20,6 +21,9 @@ export default function ClientSignup() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const { data: signupSettings, isLoading: settingsLoading } = useSignupSettings();
+
+  const isSignupEnabled = signupSettings?.client_signup_enabled ?? true;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -111,6 +115,39 @@ export default function ClientSignup() {
       setIsLoading(false);
     }
   };
+
+  // Show disabled message if signups are disabled
+  if (!settingsLoading && !isSignupEnabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md border-2 border-border shadow-md text-center">
+          <CardHeader>
+            <div className="flex justify-center mb-4">
+              <div className="p-4 bg-destructive/10 text-destructive rounded-xl">
+                <XCircle className="h-8 w-8" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold">Signups Disabled</CardTitle>
+            <CardDescription>
+              Client portal registration is currently disabled.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Please contact Soomro Law Services for access to the client portal.
+            </p>
+          </CardContent>
+          <CardFooter className="border-t-2 border-border pt-6">
+            <Link to="/client-login" className="w-full">
+              <Button variant="outline" className="w-full">
+                Return to Login
+              </Button>
+            </Link>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (

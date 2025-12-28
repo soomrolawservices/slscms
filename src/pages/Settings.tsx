@@ -7,10 +7,14 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { useSignupSettings, useUpdateSignupSetting } from '@/hooks/useSignupSettings';
+import { Loader2 } from 'lucide-react';
 
 export default function Settings() {
   const { user, profile, isAdmin } = useAuth();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const { data: signupSettings, isLoading: signupLoading } = useSignupSettings();
+  const updateSignupSetting = useUpdateSignupSetting();
 
   const handlePasswordChange = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -27,6 +31,10 @@ export default function Settings() {
     });
   };
 
+  const handleSignupToggle = (key: string, value: boolean) => {
+    updateSignupSetting.mutate({ key, value });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -40,9 +48,10 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="account" className="space-y-6">
-        <TabsList className="border-2 border-border">
+        <TabsList className="border-2 border-border flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          {isAdmin && <TabsTrigger value="signups">Signup Controls</TabsTrigger>}
           {isAdmin && <TabsTrigger value="dropdowns">Dropdowns</TabsTrigger>}
         </TabsList>
 
@@ -138,6 +147,62 @@ export default function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Signup Controls - Admin Only */}
+        {isAdmin && (
+          <TabsContent value="signups">
+            <Card className="border-2 border-border">
+              <CardHeader className="border-b-2 border-border">
+                <CardTitle>Signup Controls</CardTitle>
+                <CardDescription>
+                  Enable or disable signup options for different user types
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                {signupLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Loading settings...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-6 max-w-md">
+                    <div className="flex items-center justify-between p-4 border-2 border-border rounded-lg">
+                      <div>
+                        <p className="font-medium">Client Portal Signup</p>
+                        <p className="text-sm text-muted-foreground">
+                          Allow new clients to register via the client portal
+                        </p>
+                      </div>
+                      <Switch
+                        checked={signupSettings?.client_signup_enabled ?? true}
+                        onCheckedChange={(value) => handleSignupToggle('client_signup_enabled', value)}
+                        disabled={updateSignupSetting.isPending}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-4 border-2 border-border rounded-lg">
+                      <div>
+                        <p className="font-medium">Team Member Signup</p>
+                        <p className="text-sm text-muted-foreground">
+                          Allow new team members to register for the system
+                        </p>
+                      </div>
+                      <Switch
+                        checked={signupSettings?.team_signup_enabled ?? true}
+                        onCheckedChange={(value) => handleSignupToggle('team_signup_enabled', value)}
+                        disabled={updateSignupSetting.isPending}
+                      />
+                    </div>
+                    <div className="p-4 bg-muted/50 border-2 border-border rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Note:</strong> Disabling signups will prevent new users from registering. Existing users will not be affected.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* Dropdown Editor - Admin Only */}
         {isAdmin && (

@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Scale, CheckCircle } from 'lucide-react';
+import { Scale, CheckCircle, XCircle } from 'lucide-react';
+import { useSignupSettings } from '@/hooks/useSignupSettings';
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -21,6 +22,9 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { signup } = useAuth();
+  const { data: signupSettings, isLoading: settingsLoading } = useSignupSettings();
+
+  const isSignupEnabled = signupSettings?.team_signup_enabled ?? true;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -96,6 +100,39 @@ export default function Signup() {
       setIsLoading(false);
     }
   };
+
+  // Show disabled message if signups are disabled
+  if (!settingsLoading && !isSignupEnabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md border-2 border-border shadow-md text-center">
+          <CardHeader>
+            <div className="flex justify-center mb-4">
+              <div className="p-4 bg-destructive/10 text-destructive rounded-xl">
+                <XCircle className="h-8 w-8" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold">Signups Disabled</CardTitle>
+            <CardDescription>
+              Team member registration is currently disabled.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Please contact your administrator for access.
+            </p>
+          </CardContent>
+          <CardFooter className="border-t-2 border-border pt-6">
+            <Link to="/login" className="w-full">
+              <Button variant="outline" className="w-full">
+                Return to Login
+              </Button>
+            </Link>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (
