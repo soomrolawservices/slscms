@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Cases from "./pages/Cases";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             
             {/* Protected Routes */}
             <Route element={<AppLayout />}>

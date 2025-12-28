@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Scale } from 'lucide-react';
 
@@ -12,7 +12,6 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,13 +19,16 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const { error } = await login(email, password);
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      if (error) {
+      if (authError) {
         let errorMessage = 'Invalid email or password.';
-        if (error.message.includes('Invalid login credentials')) {
+        if (authError.message.includes('Invalid login credentials')) {
           errorMessage = 'Invalid email or password. Please try again.';
-        } else if (error.message.includes('Email not confirmed')) {
+        } else if (authError.message.includes('Email not confirmed')) {
           errorMessage = 'Please confirm your email before logging in.';
         }
         
@@ -36,6 +38,41 @@ export default function Login() {
           variant: 'destructive',
         });
         return;
+      }
+
+      // Check user status from profiles table
+      if (authData.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('status')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+        }
+
+        if (profile?.status === 'pending') {
+          // Sign out the user and show message
+          await supabase.auth.signOut();
+          toast({
+            title: 'Account Pending Approval',
+            description: 'Your account is pending admin approval. Please wait for an administrator to approve your account.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        if (profile?.status === 'blocked') {
+          // Sign out the user and show message
+          await supabase.auth.signOut();
+          toast({
+            title: 'Account Blocked',
+            description: 'Your account has been blocked. Please contact an administrator.',
+            variant: 'destructive',
+          });
+          return;
+        }
       }
 
       navigate('/dashboard');

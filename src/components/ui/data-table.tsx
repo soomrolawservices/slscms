@@ -20,6 +20,8 @@ import {
   ArrowDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { exportToCSV, exportToPDF } from '@/lib/export-utils';
+import { toast } from '@/hooks/use-toast';
 
 export interface Column<T> {
   key: keyof T | string;
@@ -36,6 +38,8 @@ interface DataTableProps<T> {
   pageSize?: number;
   onRowClick?: (row: T) => void;
   actions?: (row: T) => React.ReactNode;
+  title?: string;
+  isLoading?: boolean;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -46,6 +50,8 @@ export function DataTable<T extends { id: string }>({
   pageSize = 10,
   onRowClick,
   actions,
+  title = 'Data',
+  isLoading = false,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -93,6 +99,34 @@ export function DataTable<T extends { id: string }>({
     );
   };
 
+  const handleExportCSV = () => {
+    exportToCSV(sortedData as unknown as Record<string, unknown>[], columns as { key: string; header: string }[], title.toLowerCase().replace(/\s+/g, '-'));
+    toast({ title: 'Export successful', description: `${title} exported to CSV` });
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(sortedData as unknown as Record<string, unknown>[], columns as { key: string; header: string }[], title.toLowerCase().replace(/\s+/g, '-'), title);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="h-10 bg-muted animate-pulse rounded w-64" />
+          <div className="flex gap-2">
+            <div className="h-9 bg-muted animate-pulse rounded w-20" />
+            <div className="h-9 bg-muted animate-pulse rounded w-20" />
+          </div>
+        </div>
+        <div className="border-2 border-border">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-16 bg-muted animate-pulse border-b border-border" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Search and Export */}
@@ -110,11 +144,11 @@ export function DataTable<T extends { id: string }>({
           />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExportPDF}>
             <Download className="h-4 w-4 mr-2" />
             PDF
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Excel
           </Button>
