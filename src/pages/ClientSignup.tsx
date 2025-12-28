@@ -68,6 +68,7 @@ export default function ClientSignup() {
             name: `${formData.firstName} ${formData.lastName}`,
             phone: formData.phone,
             cnic: formData.cnic,
+            role: 'client', // This will be picked up by handle_new_user trigger
           },
         },
       });
@@ -84,20 +85,6 @@ export default function ClientSignup() {
           variant: 'destructive',
         });
         return;
-      }
-
-      // Assign client role
-      if (authData.user) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .upsert({
-            user_id: authData.user.id,
-            role: 'client',
-          });
-
-        if (roleError) {
-          console.error('Error assigning client role:', roleError);
-        }
       }
 
       setIsSubmitted(true);

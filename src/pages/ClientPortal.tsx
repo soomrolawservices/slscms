@@ -1,4 +1,4 @@
-import { Briefcase, FileText, CreditCard, Receipt, User, Clock, AlertCircle, Calendar, LogOut, MessageSquare } from 'lucide-react';
+import { Briefcase, FileText, CreditCard, Receipt, User, Clock, AlertCircle, Calendar, LogOut, MessageSquare, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
@@ -11,6 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ClientAppointmentBooking } from '@/components/portal/ClientAppointmentBooking';
 import { ClientMessaging } from '@/components/portal/ClientMessaging';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 export default function ClientPortal() {
   const { profile, userRole, logout } = useAuth();
@@ -108,6 +110,28 @@ export default function ClientPortal() {
     },
   ];
 
+  const handleDownloadDocument = async (filePath: string, title: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .download(filePath);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = title;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({ title: 'Error downloading document', description: error.message, variant: 'destructive' });
+    }
+  };
+
   const documentColumns: Column<typeof documents[0]>[] = [
     {
       key: 'title',
@@ -125,6 +149,20 @@ export default function ClientPortal() {
       header: 'Uploaded',
       sortable: true,
       render: (row) => format(new Date(row.created_at), 'MMM d, yyyy'),
+    },
+    {
+      key: 'actions',
+      header: 'Action',
+      render: (row) => row.file_path ? (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => handleDownloadDocument(row.file_path!, row.title)}
+        >
+          <Download className="h-4 w-4 mr-1" />
+          Download
+        </Button>
+      ) : null,
     },
   ];
 

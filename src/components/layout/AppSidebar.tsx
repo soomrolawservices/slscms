@@ -15,7 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   UserPlus,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,7 @@ const adminNavItems = [
   { title: 'Invoices', url: '/invoices', icon: Receipt },
   { title: 'Expenses', url: '/expenses', icon: Wallet },
   { title: 'Appointments', url: '/appointments', icon: Calendar },
+  { title: 'Messages', url: '/messages', icon: MessageSquare },
   { title: 'Credentials', url: '/credentials', icon: Key },
   { title: 'Assignments', url: '/assignments', icon: UserPlus },
   { title: 'Reports', url: '/reports', icon: BarChart3 },
@@ -48,6 +50,7 @@ const teamNavItems = [
   { title: 'Payments', url: '/payments', icon: CreditCard },
   { title: 'Expenses', url: '/expenses', icon: Wallet },
   { title: 'Appointments', url: '/appointments', icon: Calendar },
+  { title: 'Messages', url: '/messages', icon: MessageSquare },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
