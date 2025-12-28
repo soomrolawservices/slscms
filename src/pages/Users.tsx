@@ -215,6 +215,7 @@ export default function Users() {
               options={[
                 { value: 'team_member', label: 'Team Member' },
                 { value: 'admin', label: 'Admin' },
+                { value: 'client', label: 'Client' },
               ]}
               value={selectedRole}
               onChange={(value) => setSelectedRole(value as AppRole)}

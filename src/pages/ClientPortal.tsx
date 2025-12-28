@@ -1,4 +1,4 @@
-import { Briefcase, FileText, CreditCard, Receipt, Home, User } from 'lucide-react';
+import { Briefcase, FileText, CreditCard, Receipt, User, Clock, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -22,6 +22,34 @@ export default function ClientPortal() {
           ))}
         </div>
         <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  // Check user status for approval workflow
+  const isPending = profile?.status === 'pending';
+  const isBlocked = profile?.status === 'blocked';
+
+  if (isPending) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+        <Clock className="h-16 w-16 text-yellow-500 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Pending Approval</h2>
+        <p className="text-muted-foreground max-w-md">
+          Your account is pending approval. You will be notified once your access has been approved by an administrator.
+        </p>
+      </div>
+    );
+  }
+
+  if (isBlocked) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+        <AlertCircle className="h-16 w-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+        <p className="text-muted-foreground max-w-md">
+          Your account has been blocked. Please contact support for assistance.
+        </p>
       </div>
     );
   }
@@ -89,7 +117,7 @@ export default function ClientPortal() {
       key: 'amount',
       header: 'Amount',
       sortable: true,
-      render: (row) => <span className="font-bold">${Number(row.amount).toLocaleString()}</span>,
+      render: (row) => <span className="font-bold">PKR {Number(row.amount).toLocaleString()}</span>,
     },
     {
       key: 'status',
@@ -115,7 +143,7 @@ export default function ClientPortal() {
       key: 'amount',
       header: 'Amount',
       sortable: true,
-      render: (row) => <span className="font-bold">${Number(row.amount).toLocaleString()}</span>,
+      render: (row) => <span className="font-bold">PKR {Number(row.amount).toLocaleString()}</span>,
     },
     {
       key: 'status',
@@ -133,11 +161,14 @@ export default function ClientPortal() {
   const totalPaid = payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + Number(p.amount), 0);
   const pendingInvoices = invoices.filter(i => i.status === 'unpaid').reduce((sum, i) => sum + Number(i.amount), 0);
 
+  const formatCurrency = (amount: number) => `PKR ${amount.toLocaleString()}`;
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
+          <p className="text-sm text-muted-foreground font-medium">Soomro Law Services - Client Portal</p>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Welcome, {profile?.name || client?.name}</h1>
           <p className="text-muted-foreground">View your cases, documents, and financial information</p>
         </div>
@@ -175,7 +206,7 @@ export default function ClientPortal() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600">${totalPaid.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</p>
           </CardContent>
         </Card>
         <Card className="border-2 border-border">
@@ -186,7 +217,7 @@ export default function ClientPortal() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-yellow-600">${pendingInvoices.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-yellow-600">{formatCurrency(pendingInvoices)}</p>
           </CardContent>
         </Card>
       </div>

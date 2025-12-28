@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -30,6 +30,8 @@ import {
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, type ClientData } from '@/hooks/useClients';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
+import { ClientAccountLinker } from '@/components/admin/ClientAccountLinker';
+import { BulkAssignment } from '@/components/assignments/BulkAssignment';
 
 export default function Clients() {
   const { isAdmin } = useAuth();
@@ -44,6 +46,8 @@ export default function Clients() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
+  const [showLinker, setShowLinker] = useState(false);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -165,11 +169,31 @@ export default function Clients() {
             Manage your client database
           </p>
         </div>
-        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Client
-        </Button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <BulkAssignment
+              type="clients"
+              selectedIds={selectedClientIds}
+              onComplete={() => setSelectedClientIds([])}
+            />
+          )}
+          {isAdmin && (
+            <Button variant="outline" onClick={() => setShowLinker(!showLinker)}>
+              <LinkIcon className="h-4 w-4 mr-2" />
+              {showLinker ? 'Hide' : 'Link'} Accounts
+            </Button>
+          )}
+          <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Client
+          </Button>
+        </div>
       </div>
+
+      {/* Client Account Linker */}
+      {isAdmin && showLinker && (
+        <ClientAccountLinker />
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -186,6 +210,9 @@ export default function Clients() {
             searchKey="name"
             title="Clients"
             isLoading={isLoading}
+            selectable={isAdmin}
+            selectedIds={selectedClientIds}
+            onSelectionChange={setSelectedClientIds}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
