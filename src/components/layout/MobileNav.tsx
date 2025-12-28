@@ -84,11 +84,9 @@ export function MobileNav() {
       <>
         <header className="lg:hidden flex items-center justify-center p-4 border-b border-border bg-card/95 backdrop-blur-sm sticky top-0 z-40 shadow-sm">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">SL</span>
-            </div>
+            <img src="/soomro-law-logo.png" alt="Soomro Law Services" className="w-8 h-8 object-contain" />
             <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Soomro Law
+              Soomro Law Services CMS
             </h1>
           </div>
         </header>
@@ -111,11 +109,9 @@ export function MobileNav() {
       {/* Top Header - Mobile - Simplified without hamburger */}
       <header className="lg:hidden flex items-center justify-center p-4 border-b border-border bg-card/95 backdrop-blur-sm sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">SL</span>
-          </div>
+          <img src="/soomro-law-logo.png" alt="Soomro Law Services" className="w-8 h-8 object-contain" />
           <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Soomro Law
+            Soomro Law Services CMS
           </h1>
         </div>
       </header>
