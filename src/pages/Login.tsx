@@ -49,7 +49,10 @@ export default function Login() {
           .maybeSingle();
 
         if (profileError) {
-          console.error('Error fetching profile:', profileError);
+          // Only log in development to avoid exposing database details
+          if (import.meta.env.DEV) {
+            console.error('Error fetching profile:', profileError);
+          }
         }
 
         if (profile?.status === 'pending') {

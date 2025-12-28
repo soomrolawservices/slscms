@@ -47,7 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        // Only log in development to avoid exposing database details
+        if (import.meta.env.DEV) {
+          console.error('Error fetching profile:', profileError);
+        }
       } else if (profileData) {
         setProfile(profileData as Profile);
       }
@@ -60,12 +63,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (roleError) {
-        console.error('Error fetching role:', roleError);
+        // Only log in development to avoid exposing database details
+        if (import.meta.env.DEV) {
+          console.error('Error fetching role:', roleError);
+        }
       } else if (roleData) {
         setUserRole(roleData.role as UserRole);
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      // Only log in development to avoid exposing database details
+      if (import.meta.env.DEV) {
+        console.error('Error fetching user data:', error);
+      }
     }
   };
 
