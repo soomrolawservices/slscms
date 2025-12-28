@@ -14,7 +14,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,6 @@ const teamNavItems = [
 
 export function AppSidebar() {
   const { user, profile, isAdmin, logout } = useAuth();
-  const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = isAdmin ? adminNavItems : teamNavItems;
@@ -54,20 +53,25 @@ export function AppSidebar() {
   return (
     <aside 
       className={cn(
-        "hidden lg:flex flex-col border-r-2 border-border bg-sidebar transition-all duration-300",
+        "hidden lg:flex flex-col bg-gradient-to-b from-sidebar to-sidebar/95 transition-all duration-300 shadow-xl",
         collapsed ? "w-16" : "w-64"
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b-2 border-border">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border/30">
         {!collapsed && (
-          <h1 className="text-xl font-bold tracking-tight">LegalFlow</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
+              <span className="text-sidebar-primary-foreground font-bold text-sm">SL</span>
+            </div>
+            <h1 className="text-lg font-bold text-sidebar-foreground">Soomro Law</h1>
+          </div>
         )}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8"
+          className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -81,10 +85,10 @@ export function AppSidebar() {
             to={item.url}
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors border-2",
+                "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all rounded-lg",
                 isActive
-                  ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                  : "border-transparent hover:bg-accent hover:border-border"
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
               )
             }
           >
@@ -95,18 +99,18 @@ export function AppSidebar() {
       </nav>
 
       {/* User section */}
-      <div className="p-4 border-t-2 border-border">
+      <div className="p-4 border-t border-sidebar-border/30">
         {!collapsed && (
-          <div className="mb-3">
-            <p className="text-sm font-medium truncate">{profile?.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          <div className="mb-3 p-2 rounded-lg bg-sidebar-accent/30">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.name}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
           </div>
         )}
         <Button
-          variant="outline"
+          variant="ghost"
           size={collapsed ? "icon" : "default"}
           onClick={logout}
-          className="w-full"
+          className="w-full text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent border border-sidebar-border/30"
         >
           <LogOut className="h-4 w-4" />
           {!collapsed && <span className="ml-2">Logout</span>}
