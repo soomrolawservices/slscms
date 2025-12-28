@@ -9,10 +9,110 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Simple UUID validation
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+// Sanitize string for HTML output - escape special characters
+function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Helper function to verify JWT and get user
+async function verifyAuth(req: Request, supabase: any) {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    throw new Error('No authorization header');
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  
+  if (error || !user) {
+    throw new Error('Unauthorized: Invalid token');
+  }
+
+  return user;
+}
+
+// Helper function to check if user is admin
+async function checkAdminRole(supabase: any, userId: string) {
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('role', 'admin')
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error('Forbidden: Admin access required');
+  }
+
+  // Also check if user is active
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', userId)
+    .single();
+
+  if (profileError || (profile as any)?.status !== 'active') {
+    throw new Error('Forbidden: Account is not active');
+  }
+
+  return true;
+}
+
 interface ExpenseNotificationRequest {
   expenseId: string;
   action: 'approved' | 'rejected';
   reason?: string;
+}
+
+// Validate input
+function validateInput(body: unknown): ExpenseNotificationRequest {
+  if (!body || typeof body !== 'object') {
+    throw new Error('Invalid request body');
+  }
+
+  const { expenseId, action, reason } = body as Record<string, unknown>;
+
+  // Validate expenseId
+  if (!expenseId || typeof expenseId !== 'string') {
+    throw new Error('expenseId is required and must be a string');
+  }
+  if (!isValidUUID(expenseId)) {
+    throw new Error('expenseId must be a valid UUID');
+  }
+
+  // Validate action
+  if (!action || typeof action !== 'string') {
+    throw new Error('action is required and must be a string');
+  }
+  if (action !== 'approved' && action !== 'rejected') {
+    throw new Error('action must be either "approved" or "rejected"');
+  }
+
+  // Validate reason (optional)
+  let validatedReason: string | undefined;
+  if (reason !== undefined) {
+    if (typeof reason !== 'string') {
+      throw new Error('reason must be a string');
+    }
+    if (reason.length > 500) {
+      throw new Error('reason must be 500 characters or less');
+    }
+    validatedReason = reason;
+  }
+
+  return { expenseId, action: action as 'approved' | 'rejected', reason: validatedReason };
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -21,12 +121,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { expenseId, action, reason }: ExpenseNotificationRequest = await req.json();
-    console.log(`Processing expense notification: ${action} for expense ${expenseId}`);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verify authentication
+    const user = await verifyAuth(req, supabase);
+    console.log(`Expense notification requested by user: ${user.id}`);
+
+    // Verify admin role (only admins can approve/reject expenses)
+    await checkAdminRole(supabase, user.id);
+    console.log(`Admin access verified for user: ${user.id}`);
+
+    // Validate input
+    const rawBody = await req.json();
+    const { expenseId, action, reason } = validateInput(rawBody);
+    console.log(`Processing expense notification: ${action} for expense ${expenseId}`);
 
     // Get expense details
     const { data: expense, error: expenseError } = await supabase
@@ -41,7 +151,11 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const userEmail = expense.profiles?.email;
-    const userName = expense.profiles?.name || 'Team Member';
+    // Sanitize user-provided content
+    const userName = escapeHtml(expense.profiles?.name || 'Team Member');
+    const expenseTitle = escapeHtml(expense.title);
+    const expenseCategory = escapeHtml(expense.category || 'Other');
+    const sanitizedReason = reason ? escapeHtml(reason) : undefined;
 
     if (!userEmail) {
       console.log('No email found for expense creator');
@@ -57,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: "Soomro Law Services <onboarding@resend.dev>",
       to: [userEmail],
-      subject: `Expense ${statusText}: ${expense.title}`,
+      subject: `Expense ${statusText}: ${expenseTitle}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -96,7 +210,7 @@ const handler = async (req: Request): Promise<Response> => {
               <div class="expense-details">
                 <div class="detail-row">
                   <span class="label">Title</span>
-                  <span class="value">${expense.title}</span>
+                  <span class="value">${expenseTitle}</span>
                 </div>
                 <div class="detail-row">
                   <span class="label">Amount</span>
@@ -108,14 +222,14 @@ const handler = async (req: Request): Promise<Response> => {
                 </div>
                 <div class="detail-row">
                   <span class="label">Category</span>
-                  <span class="value">${expense.category || 'Other'}</span>
+                  <span class="value">${expenseCategory}</span>
                 </div>
               </div>
               
-              ${reason ? `
+              ${sanitizedReason ? `
               <div class="reason-box">
                 <strong>Reason:</strong><br/>
-                ${reason}
+                ${sanitizedReason}
               </div>
               ` : ''}
               
@@ -132,11 +246,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", emailResponse);
 
-    // Create in-app notification
+    // Create in-app notification with sanitized content
     await supabase.from('notifications').insert({
       user_id: expense.created_by,
       title: `Expense ${statusText}`,
-      message: `Your expense "${expense.title}" for PKR ${Number(expense.amount).toLocaleString()} has been ${action}.${reason ? ` Reason: ${reason}` : ''}`,
+      message: `Your expense "${expenseTitle}" for PKR ${Number(expense.amount).toLocaleString()} has been ${action}.${sanitizedReason ? ` Reason: ${sanitizedReason}` : ''}`,
       type: action === 'approved' ? 'success' : 'warning',
       entity_type: 'expense',
       entity_id: expenseId,
@@ -146,12 +260,16 @@ const handler = async (req: Request): Promise<Response> => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error: any) {
-    console.error("Error in expense-notification function:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error in expense-notification function:", message);
+    const status = message.includes('Unauthorized') ? 401 : 
+                   message.includes('Forbidden') ? 403 : 
+                   message.includes('must be') || message.includes('required') ? 400 : 500;
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       {
-        status: 500,
+        status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
