@@ -361,6 +361,33 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_budgets: {
+        Row: {
+          alert_threshold: number
+          category: string
+          created_at: string
+          id: string
+          monthly_limit: number
+          updated_at: string
+        }
+        Insert: {
+          alert_threshold?: number
+          category: string
+          created_at?: string
+          id?: string
+          monthly_limit?: number
+          updated_at?: string
+        }
+        Update: {
+          alert_threshold?: number
+          category?: string
+          created_at?: string
+          id?: string
+          monthly_limit?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
