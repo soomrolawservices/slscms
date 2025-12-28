@@ -10,71 +10,51 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { User } from '@/types';
-import { toast } from '@/hooks/use-toast';
+import { SearchableCombobox } from '@/components/ui/searchable-combobox';
+import { useUsers, useUpdateUserStatus, useUpdateUserRole, type UserWithRole } from '@/hooks/useUsers';
+import { useAuth } from '@/contexts/AuthContext';
+import { ConfirmModal } from '@/components/modals/ConfirmModal';
+import type { Database } from '@/integrations/supabase/types';
 
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'admin@legalflow.com',
-    name: 'Admin User',
-    phone: '+1 555-0100',
-    cnic: '11111-2222333-4',
-    role: 'admin',
-    status: 'active',
-    createdAt: new Date('2024-01-01'),
-  },
-  {
-    id: '2',
-    email: 'john.lawyer@legalflow.com',
-    name: 'John Lawyer',
-    phone: '+1 555-0101',
-    cnic: '22222-3333444-5',
-    role: 'team_member',
-    status: 'active',
-    createdAt: new Date('2024-02-15'),
-  },
-  {
-    id: '3',
-    email: 'jane.doe@legalflow.com',
-    name: 'Jane Doe',
-    phone: '+1 555-0102',
-    cnic: '33333-4444555-6',
-    role: 'team_member',
-    status: 'pending',
-    createdAt: new Date('2024-06-20'),
-  },
-  {
-    id: '4',
-    email: 'mark.smith@legalflow.com',
-    name: 'Mark Smith',
-    phone: '+1 555-0103',
-    cnic: '44444-5555666-7',
-    role: 'team_member',
-    status: 'blocked',
-    createdAt: new Date('2024-03-10'),
-  },
-];
+type UserStatus = Database['public']['Enums']['user_status'];
+type AppRole = Database['public']['Enums']['app_role'];
 
 export default function Users() {
-  const [users, setUsers] = useState(mockUsers);
+  const { isAdmin } = useAuth();
+  const { data: users = [], isLoading } = useUsers();
+  const updateUserStatus = useUpdateUserStatus();
+  const updateUserRole = useUpdateUserRole();
+
   const [activeTab, setActiveTab] = useState('all');
+  const [isRoleOpen, setIsRoleOpen] = useState(false);
+  const [isBlockOpen, setIsBlockOpen] = useState(false);
+  const [isRejectOpen, setIsRejectOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AppRole>('team_member');
 
   const filteredUsers = users.filter((user) =>
     activeTab === 'all' ? true : user.status === activeTab
   );
 
-  const columns: Column<User>[] = [
+  const columns: Column<UserWithRole>[] = [
     {
       key: 'name',
       header: 'User',
       render: (row) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8 border border-border">
-            <AvatarImage src={row.profilePic} />
+            <AvatarImage src={row.avatar_url || undefined} />
             <AvatarFallback className="text-xs bg-muted">
-              {row.name.split(' ').map(n => n[0]).join('')}
+              {row.name.split(' ').map((n) => n[0]).join('')}
             </AvatarFallback>
           </Avatar>
           <div>
@@ -87,17 +67,17 @@ export default function Users() {
     {
       key: 'phone',
       header: 'Phone',
+      render: (row) => row.phone || '-',
     },
     {
       key: 'cnic',
       header: 'CNIC',
+      render: (row) => row.cnic || '-',
     },
     {
       key: 'role',
       header: 'Role',
-      render: (row) => (
-        <span className="capitalize">{row.role.replace('_', ' ')}</span>
-      ),
+      render: (row) => <span className="capitalize">{row.role?.replace('_', ' ') || 'Team Member'}</span>,
     },
     {
       key: 'status',
@@ -106,74 +86,81 @@ export default function Users() {
     },
   ];
 
-  const handleApprove = (user: User) => {
-    setUsers(users.map(u => 
-      u.id === user.id ? { ...u, status: 'active' as const } : u
-    ));
-    toast({
-      title: 'User approved',
-      description: `${user.name} has been activated.`,
-    });
+  const handleApprove = async (user: UserWithRole) => {
+    await updateUserStatus.mutateAsync({ userId: user.id, status: 'active' });
   };
 
-  const handleReject = (user: User) => {
-    setUsers(users.filter(u => u.id !== user.id));
-    toast({
-      title: 'User rejected',
-      description: `${user.name}'s request has been rejected.`,
-    });
+  const handleRejectClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setIsRejectOpen(true);
   };
 
-  const handleBlock = (user: User) => {
-    setUsers(users.map(u => 
-      u.id === user.id ? { ...u, status: 'blocked' as const } : u
-    ));
-    toast({
-      title: 'User blocked',
-      description: `${user.name} has been blocked.`,
-    });
+  const handleReject = async () => {
+    if (!selectedUser) return;
+    await updateUserStatus.mutateAsync({ userId: selectedUser.id, status: 'blocked' });
+    setIsRejectOpen(false);
+    setSelectedUser(null);
   };
 
-  const handleUnblock = (user: User) => {
-    setUsers(users.map(u => 
-      u.id === user.id ? { ...u, status: 'active' as const } : u
-    ));
-    toast({
-      title: 'User unblocked',
-      description: `${user.name} has been unblocked.`,
-    });
+  const handleBlockClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setIsBlockOpen(true);
   };
+
+  const handleBlock = async () => {
+    if (!selectedUser) return;
+    await updateUserStatus.mutateAsync({ userId: selectedUser.id, status: 'blocked' });
+    setIsBlockOpen(false);
+    setSelectedUser(null);
+  };
+
+  const handleUnblock = async (user: UserWithRole) => {
+    await updateUserStatus.mutateAsync({ userId: user.id, status: 'active' });
+  };
+
+  const handleChangeRoleClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setSelectedRole(user.role || 'team_member');
+    setIsRoleOpen(true);
+  };
+
+  const handleChangeRole = async () => {
+    if (!selectedUser) return;
+    await updateUserRole.mutateAsync({ userId: selectedUser.id, role: selectedRole });
+    setIsRoleOpen(false);
+    setSelectedUser(null);
+  };
+
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <p className="text-muted-foreground">You don't have permission to view this page.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
-            Users
-          </h1>
-          <p className="text-muted-foreground">
-            Manage team members and access
-          </p>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Users</h1>
+          <p className="text-muted-foreground">Manage team members and access</p>
         </div>
       </div>
 
       {/* Pending Requests Alert */}
-      {users.filter(u => u.status === 'pending').length > 0 && (
+      {users.filter((u) => u.status === 'pending').length > 0 && (
         <div className="border-2 border-border bg-muted/50 p-4 flex items-center justify-between">
           <div>
             <p className="font-medium">Pending Approval Requests</p>
             <p className="text-sm text-muted-foreground">
-              {users.filter(u => u.status === 'pending').length} users waiting for approval
+              {users.filter((u) => u.status === 'pending').length} users waiting for approval
             </p>
           </div>
-          <Button variant="outline" onClick={() => setActiveTab('pending')}>
-            Review
-          </Button>
+          <Button variant="outline" onClick={() => setActiveTab('pending')}>Review</Button>
         </div>
       )}
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="border-2 border-border">
           <TabsTrigger value="all">All</TabsTrigger>
@@ -187,53 +174,29 @@ export default function Users() {
             columns={columns}
             searchPlaceholder="Search users..."
             searchKey="name"
+            title="Users"
+            isLoading={isLoading}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-popover border-2 border-border">
-                  <DropdownMenuItem>
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Activity
-                  </DropdownMenuItem>
+                  <DropdownMenuItem><Eye className="h-4 w-4 mr-2" />View Activity</DropdownMenuItem>
                   {row.status === 'pending' && (
                     <>
-                      <DropdownMenuItem onClick={() => handleApprove(row)}>
-                        <Check className="h-4 w-4 mr-2" />
-                        Approve
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-destructive"
-                        onClick={() => handleReject(row)}
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Reject
-                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleApprove(row)}><Check className="h-4 w-4 mr-2" />Approve</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => handleRejectClick(row)}><X className="h-4 w-4 mr-2" />Reject</DropdownMenuItem>
                     </>
                   )}
                   {row.status === 'active' && row.role !== 'admin' && (
-                    <DropdownMenuItem 
-                      className="text-destructive"
-                      onClick={() => handleBlock(row)}
-                    >
-                      <Shield className="h-4 w-4 mr-2" />
-                      Block
-                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={() => handleBlockClick(row)}><Shield className="h-4 w-4 mr-2" />Block</DropdownMenuItem>
                   )}
                   {row.status === 'blocked' && (
-                    <DropdownMenuItem onClick={() => handleUnblock(row)}>
-                      <Shield className="h-4 w-4 mr-2" />
-                      Unblock
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleUnblock(row)}><Shield className="h-4 w-4 mr-2" />Unblock</DropdownMenuItem>
                   )}
                   {row.role !== 'admin' && (
-                    <DropdownMenuItem>
-                      <UserCog className="h-4 w-4 mr-2" />
-                      Change Role
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleChangeRoleClick(row)}><UserCog className="h-4 w-4 mr-2" />Change Role</DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -241,6 +204,34 @@ export default function Users() {
           />
         </TabsContent>
       </Tabs>
+
+      {/* Change Role Dialog */}
+      <Dialog open={isRoleOpen} onOpenChange={setIsRoleOpen}>
+        <DialogContent className="border-2 border-border">
+          <DialogHeader><DialogTitle>Change User Role</DialogTitle></DialogHeader>
+          <div className="py-4">
+            <Label>Role</Label>
+            <SearchableCombobox
+              options={[
+                { value: 'team_member', label: 'Team Member' },
+                { value: 'admin', label: 'Admin' },
+              ]}
+              value={selectedRole}
+              onChange={(value) => setSelectedRole(value as AppRole)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRoleOpen(false)}>Cancel</Button>
+            <Button onClick={handleChangeRole} disabled={updateUserRole.isPending}>
+              {updateUserRole.isPending ? 'Saving...' : 'Save Role'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmModal open={isBlockOpen} onOpenChange={setIsBlockOpen} title="Block User" description={`Are you sure you want to block ${selectedUser?.name}? They will not be able to access the system.`} confirmLabel="Block" onConfirm={handleBlock} variant="destructive" />
+      <ConfirmModal open={isRejectOpen} onOpenChange={setIsRejectOpen} title="Reject User" description={`Are you sure you want to reject ${selectedUser?.name}'s signup request?`} confirmLabel="Reject" onConfirm={handleReject} variant="destructive" />
     </div>
   );
 }

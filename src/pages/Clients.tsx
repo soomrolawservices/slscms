@@ -27,25 +27,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockClients } from '@/data/mockData';
-import type { Client } from '@/types';
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, type ClientData } from '@/hooks/useClients';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { ConfirmModal } from '@/components/modals/ConfirmModal';
 
 export default function Clients() {
   const { isAdmin } = useAuth();
-  const [clients, setClients] = useState(mockClients);
+  const { data: clients = [], isLoading } = useClients();
+  const createClient = useCreateClient();
+  const updateClient = useUpdateClient();
+  const deleteClient = useDeleteClient();
+
   const [activeTab, setActiveTab] = useState('active');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    client_type: 'individual',
+    phone: '',
+    email: '',
+    cnic: '',
+    region: '',
+    status: 'active',
+  });
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      client_type: 'individual',
+      phone: '',
+      email: '',
+      cnic: '',
+      region: '',
+      status: 'active',
+    });
+  };
 
   const filteredClients = clients.filter((client) =>
     activeTab === 'all' ? true : client.status === activeTab
   );
 
-  const columns: Column<Client>[] = [
+  const columns: Column<ClientData>[] = [
     {
       key: 'name',
       header: 'Client Name',
@@ -53,24 +80,25 @@ export default function Clients() {
       render: (row) => <span className="font-medium">{row.name}</span>,
     },
     {
-      key: 'type',
+      key: 'client_type',
       header: 'Type',
-      render: (row) => (
-        <span className="capitalize">{row.type}</span>
-      ),
+      render: (row) => <span className="capitalize">{row.client_type}</span>,
     },
     {
       key: 'phone',
       header: 'Phone',
+      render: (row) => row.phone || '-',
     },
     {
       key: 'email',
       header: 'Email',
+      render: (row) => row.email || '-',
     },
     {
       key: 'region',
       header: 'Region',
       sortable: true,
+      render: (row) => row.region || '-',
     },
     {
       key: 'status',
@@ -79,44 +107,50 @@ export default function Clients() {
     },
   ];
 
-  const handleView = (client: Client) => {
+  const handleView = (client: ClientData) => {
     setSelectedClient(client);
     setIsViewOpen(true);
   };
 
-  const handleEdit = (client: Client) => {
+  const handleEdit = (client: ClientData) => {
     setSelectedClient(client);
+    setFormData({
+      name: client.name,
+      client_type: client.client_type,
+      phone: client.phone || '',
+      email: client.email || '',
+      cnic: client.cnic || '',
+      region: client.region || '',
+      status: client.status,
+    });
     setIsEditOpen(true);
   };
 
-  const handleDelete = (client: Client) => {
-    setClients(clients.filter((c) => c.id !== client.id));
-    toast({
-      title: 'Client deleted',
-      description: `${client.name} has been removed.`,
-    });
+  const handleDeleteClick = (client: ClientData) => {
+    setSelectedClient(client);
+    setIsDeleteOpen(true);
   };
 
-  const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const newClient: Client = {
-      id: String(Date.now()),
-      name: formData.get('name') as string,
-      type: formData.get('type') as Client['type'],
-      phone: formData.get('phone') as string,
-      email: formData.get('email') as string,
-      cnic: formData.get('cnic') as string,
-      region: formData.get('region') as string,
-      status: 'active',
-      createdAt: new Date(),
-    };
-    setClients([newClient, ...clients]);
+    await createClient.mutateAsync(formData);
     setIsCreateOpen(false);
-    toast({
-      title: 'Client created',
-      description: `${newClient.name} has been added.`,
-    });
+    resetForm();
+  };
+
+  const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedClient) return;
+    await updateClient.mutateAsync({ id: selectedClient.id, ...formData });
+    setIsEditOpen(false);
+    resetForm();
+  };
+
+  const handleDelete = async () => {
+    if (!selectedClient) return;
+    await deleteClient.mutateAsync(selectedClient.id);
+    setIsDeleteOpen(false);
+    setSelectedClient(null);
   };
 
   return (
@@ -131,7 +165,7 @@ export default function Clients() {
             Manage your client database
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="shadow-xs">
+        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
           <Plus className="h-4 w-4 mr-2" />
           Add Client
         </Button>
@@ -150,6 +184,8 @@ export default function Clients() {
             columns={columns}
             searchPlaceholder="Search clients..."
             searchKey="name"
+            title="Clients"
+            isLoading={isLoading}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -168,7 +204,7 @@ export default function Clients() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"
-                    onClick={() => handleDelete(row)}
+                    onClick={() => handleDeleteClick(row)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
@@ -193,11 +229,19 @@ export default function Clients() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" name="name" required />
+                <Input 
+                  id="name" 
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required 
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="type">Type</Label>
-                <Select name="type" required>
+                <Select 
+                  value={formData.client_type}
+                  onValueChange={(value) => setFormData({ ...formData, client_type: value })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -211,21 +255,39 @@ export default function Clients() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" name="phone" type="tel" required />
+                  <Input 
+                    id="phone" 
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" required />
+                  <Input 
+                    id="email" 
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="cnic">CNIC / ID</Label>
-                  <Input id="cnic" name="cnic" required />
+                  <Input 
+                    id="cnic"
+                    value={formData.cnic}
+                    onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="region">Region</Label>
-                  <Input id="region" name="region" required />
+                  <Input 
+                    id="region"
+                    value={formData.region}
+                    onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                  />
                 </div>
               </div>
             </div>
@@ -233,7 +295,111 @@ export default function Clients() {
               <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Create Client</Button>
+              <Button type="submit" disabled={createClient.isPending}>
+                {createClient.isPending ? 'Creating...' : 'Create Client'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="border-2 border-border">
+          <DialogHeader>
+            <DialogTitle>Edit Client</DialogTitle>
+            <DialogDescription>
+              Update the client details below.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdate}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input 
+                  id="edit-name" 
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-type">Type</Label>
+                <Select 
+                  value={formData.client_type}
+                  onValueChange={(value) => setFormData({ ...formData, client_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-2 border-border">
+                    <SelectItem value="individual">Individual</SelectItem>
+                    <SelectItem value="corporate">Corporate</SelectItem>
+                    <SelectItem value="government">Government</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-phone">Phone</Label>
+                  <Input 
+                    id="edit-phone" 
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input 
+                    id="edit-email" 
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-cnic">CNIC / ID</Label>
+                  <Input 
+                    id="edit-cnic"
+                    value={formData.cnic}
+                    onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-region">Region</Label>
+                  <Input 
+                    id="edit-region"
+                    value={formData.region}
+                    onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select 
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-2 border-border">
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateClient.isPending}>
+                {updateClient.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -254,23 +420,23 @@ export default function Clients() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Type</p>
-                  <p className="font-medium capitalize">{selectedClient.type}</p>
+                  <p className="font-medium capitalize">{selectedClient.client_type}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{selectedClient.email}</p>
+                  <p className="font-medium">{selectedClient.email || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{selectedClient.phone}</p>
+                  <p className="font-medium">{selectedClient.phone || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">CNIC / ID</p>
-                  <p className="font-medium">{selectedClient.cnic}</p>
+                  <p className="font-medium">{selectedClient.cnic || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Region</p>
-                  <p className="font-medium">{selectedClient.region}</p>
+                  <p className="font-medium">{selectedClient.region || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
@@ -281,6 +447,17 @@ export default function Clients() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        title="Delete Client"
+        description={`Are you sure you want to delete ${selectedClient?.name}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        variant="destructive"
+      />
     </div>
   );
 }
