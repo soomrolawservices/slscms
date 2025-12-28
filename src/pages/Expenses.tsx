@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload, FileImage } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload, FileImage, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -23,6 +23,9 @@ import { Label } from '@/components/ui/label';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, useUploadReceipt, type ExpenseData } from '@/hooks/useExpenses';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
+import { ExpenseReports } from '@/components/expenses/ExpenseReports';
+import { ExpenseApproval } from '@/components/expenses/ExpenseApproval';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 
 const EXPENSE_CATEGORIES = [
@@ -40,12 +43,14 @@ const EXPENSE_CATEGORIES = [
 
 export default function Expenses() {
   const { data: expenses = [], isLoading } = useExpenses();
+  const { isAdmin } = useAuth();
   const createExpense = useCreateExpense();
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
   const uploadReceipt = useUploadReceipt();
 
   const [activeTab, setActiveTab] = useState('all');
+  const [viewMode, setViewMode] = useState<'list' | 'reports' | 'approval'>('list');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -210,36 +215,67 @@ export default function Expenses() {
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Expenses</h1>
           <p className="text-muted-foreground">Track internal firm expenses and receipts</p>
         </div>
-        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Expense
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'outline'}
+            onClick={() => setViewMode('list')}
+          >
+            List
+          </Button>
+          <Button
+            variant={viewMode === 'reports' ? 'default' : 'outline'}
+            onClick={() => setViewMode('reports')}
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Reports
+          </Button>
+          {isAdmin && (
+            <Button
+              variant={viewMode === 'approval' ? 'default' : 'outline'}
+              onClick={() => setViewMode('approval')}
+            >
+              Approvals ({expenses.filter(e => e.status === 'pending').length})
+            </Button>
+          )}
+          <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Expense
+          </Button>
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-card border-2 border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Total Expenses</p>
-          <p className="text-2xl font-bold">${totalExpenses.toLocaleString()}</p>
-        </div>
-        <div className="bg-card border-2 border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Pending Approval</p>
-          <p className="text-2xl font-bold text-yellow-600">${pendingExpenses.toLocaleString()}</p>
-        </div>
-        <div className="bg-card border-2 border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Approved</p>
-          <p className="text-2xl font-bold text-green-600">${approvedExpenses.toLocaleString()}</p>
-        </div>
-      </div>
+      {viewMode === 'reports' && <ExpenseReports expenses={expenses} />}
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="border-2 border-border">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
-          <TabsTrigger value="rejected">Rejected</TabsTrigger>
-        </TabsList>
+      {viewMode === 'approval' && isAdmin && (
+        <ExpenseApproval expenses={expenses} isLoading={isLoading} />
+      )}
+
+      {viewMode === 'list' && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-card border-2 border-border rounded-lg p-4">
+              <p className="text-sm text-muted-foreground">Total Expenses</p>
+              <p className="text-2xl font-bold">${totalExpenses.toLocaleString()}</p>
+            </div>
+            <div className="bg-card border-2 border-border rounded-lg p-4">
+              <p className="text-sm text-muted-foreground">Pending Approval</p>
+              <p className="text-2xl font-bold text-yellow-600">${pendingExpenses.toLocaleString()}</p>
+            </div>
+            <div className="bg-card border-2 border-border rounded-lg p-4">
+              <p className="text-sm text-muted-foreground">Approved</p>
+              <p className="text-2xl font-bold text-green-600">${approvedExpenses.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="border-2 border-border">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="pending">Pending</TabsTrigger>
+              <TabsTrigger value="approved">Approved</TabsTrigger>
+              <TabsTrigger value="rejected">Rejected</TabsTrigger>
+            </TabsList>
         <TabsContent value={activeTab} className="mt-4">
           <DataTable
             data={filteredExpenses}
@@ -273,7 +309,9 @@ export default function Expenses() {
             )}
           />
         </TabsContent>
-      </Tabs>
+          </Tabs>
+        </>
+      )}
 
       {/* Create Modal */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

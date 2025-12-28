@@ -22,6 +22,7 @@ import Users from "./pages/Users";
 import Permissions from "./pages/Permissions";
 import Settings from "./pages/Settings";
 import Assignments from "./pages/Assignments";
+import ClientPortal from "./pages/ClientPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/permissions" element={<Permissions />} />
               <Route path="/assignments" element={<Assignments />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/portal" element={<ClientPortal />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
