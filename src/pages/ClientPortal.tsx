@@ -1,4 +1,4 @@
-import { Briefcase, FileText, CreditCard, Receipt, User, Clock, AlertCircle, Calendar, LogOut } from 'lucide-react';
+import { Briefcase, FileText, CreditCard, Receipt, User, Clock, AlertCircle, Calendar, LogOut, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ClientAppointmentBooking } from '@/components/portal/ClientAppointmentBooking';
+import { ClientMessaging } from '@/components/portal/ClientMessaging';
 import { useNavigate } from 'react-router-dom';
 
 export default function ClientPortal() {
@@ -266,6 +267,10 @@ export default function ClientPortal() {
             <Calendar className="h-4 w-4" />
             Appointments
           </TabsTrigger>
+          <TabsTrigger value="messages" className="flex items-center gap-1">
+            <MessageSquare className="h-4 w-4" />
+            Messages
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="cases" className="mt-4">
@@ -310,6 +315,10 @@ export default function ClientPortal() {
 
         <TabsContent value="appointments" className="mt-4">
           <ClientAppointmentBooking />
+        </TabsContent>
+
+        <TabsContent value="messages" className="mt-4">
+          <ClientMessaging />
         </TabsContent>
       </Tabs>
     </div>
