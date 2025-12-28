@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Bell, Video, Building, MapPin, Mail } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Bell, Video, Building, MapPin, Mail, Check, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -27,6 +27,7 @@ import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { ReminderDialog } from '@/components/appointments/ReminderDialog';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
 
 const typeIcons: Record<string, React.ElementType> = {
   'in-office': Building,
@@ -35,6 +36,7 @@ const typeIcons: Record<string, React.ElementType> = {
 };
 
 export default function Appointments() {
+  const { user } = useAuth();
   const { data: appointments = [], isLoading } = useAppointments();
   const { data: clients = [] } = useClients();
   const createAppointment = useCreateAppointment();
@@ -246,6 +248,15 @@ export default function Appointments() {
     setSelectedAppointment(null);
   };
 
+  const handleApprove = async (apt: AppointmentData) => {
+    await updateAppointment.mutateAsync({
+      id: apt.id,
+      status: 'scheduled',
+      assigned_to: user?.id,
+    });
+    toast({ title: 'Appointment approved and assigned to you' });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -271,6 +282,7 @@ export default function Appointments() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="border-2 border-border">
           <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="pending">Pending Approval</TabsTrigger>
           <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
@@ -295,6 +307,17 @@ export default function Appointments() {
                     <Eye className="h-4 w-4 mr-2" />
                     View
                   </DropdownMenuItem>
+                  {row.status === 'pending' && (
+                    <>
+                      <DropdownMenuItem 
+                        onClick={() => handleApprove(row)}
+                        className="text-green-600"
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Approve & Assign to Me
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuItem 
                     onClick={() => handleSetReminder(row)}
                     className="text-primary"
@@ -484,7 +507,8 @@ export default function Appointments() {
                   <Label>Status</Label>
                   <SearchableCombobox
                     options={[
-                      { value: 'scheduled', label: 'Scheduled' },
+                      { value: 'pending', label: 'Pending Approval' },
+                      { value: 'scheduled', label: 'Scheduled (Approved)' },
                       { value: 'completed', label: 'Completed' },
                       { value: 'cancelled', label: 'Cancelled' },
                     ]}

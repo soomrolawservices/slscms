@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -47,7 +48,12 @@ const App = () => (
             <Route path="/client-login" element={<ClientLogin />} />
             <Route path="/client-signup" element={<ClientSignup />} />
             
-            {/* Protected Routes */}
+            {/* Client Portal - Separate Layout */}
+            <Route element={<ClientPortalLayout />}>
+              <Route path="/portal" element={<ClientPortal />} />
+            </Route>
+            
+            {/* Protected Routes - Admin/Team */}
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/clients" element={<Clients />} />
@@ -63,7 +69,6 @@ const App = () => (
               <Route path="/assignments" element={<Assignments />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/notifications" element={<Notifications />} />
-              <Route path="/portal" element={<ClientPortal />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
