@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, ArrowLeft, User, Plus, Check, CheckCheck, Users } from 'lucide-react';
+import { MessageSquare, Send, ArrowLeft, User, Plus, Check, CheckCheck, Users, Reply, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +35,7 @@ interface Message {
   content: string;
   is_read: boolean;
   created_at: string;
+  reply_to_id: string | null;
 }
 
 interface TeamMember {
@@ -66,6 +67,7 @@ export default function Messages() {
   const [newConvTeamMemberId, setNewConvTeamMemberId] = useState('');
   const [newConvMessage, setNewConvMessage] = useState('');
   const [chatType, setChatType] = useState<'client' | 'team'>('client');
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch team members (admins and team_members, excluding self)
@@ -252,6 +254,7 @@ export default function Messages() {
           client_id: selectedThread.type === 'client' ? selectedThread.participant_id : null,
           receiver_id: selectedThread.type === 'team' ? selectedThread.participant_id : null,
           content: newMessage.trim(),
+          reply_to_id: replyingTo?.id || null,
         });
 
       if (error) throw error;
@@ -297,6 +300,7 @@ export default function Messages() {
       queryClient.invalidateQueries({ queryKey: ['staff-thread-messages', selectedThread.conversation_id] });
       queryClient.invalidateQueries({ queryKey: ['staff-chat-threads', user?.id] });
       setNewMessage('');
+      setReplyingTo(null);
     } catch (error: any) {
       toast({ title: 'Error sending message', description: error.message, variant: 'destructive' });
     }
@@ -577,41 +581,79 @@ export default function Messages() {
                     <div className="space-y-3">
                       {messages.map((msg) => {
                         const isOwn = msg.sender_id === user?.id;
+                        const repliedMessage = msg.reply_to_id 
+                          ? messages.find(m => m.id === msg.reply_to_id)
+                          : null;
                         return (
                           <div
                             key={msg.id}
                             className={cn(
-                              "flex",
+                              "flex group",
                               isOwn ? "justify-end" : "justify-start"
                             )}
                           >
-                            <div
-                              className={cn(
-                                "max-w-[80%] rounded-lg p-3 shadow-sm",
-                                isOwn
-                                  ? "bg-primary text-primary-foreground rounded-br-sm"
-                                  : "bg-muted rounded-bl-sm"
+                            <div className="flex items-center gap-1">
+                              {!isOwn && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => setReplyingTo(msg)}
+                                >
+                                  <Reply className="h-3 w-3" />
+                                </Button>
                               )}
-                            >
-                              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                              <div className={cn(
-                                "flex items-center gap-1 mt-1",
-                                isOwn ? "justify-end" : "justify-start"
-                              )}>
-                                <p className={cn(
-                                  "text-[10px]",
-                                  isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                                )}>
-                                  {format(new Date(msg.created_at), 'h:mm a')}
-                                </p>
-                                {isOwn && (
-                                  msg.is_read ? (
-                                    <CheckCheck className="h-3.5 w-3.5 text-sky-300" />
-                                  ) : (
-                                    <Check className="h-3.5 w-3.5 text-primary-foreground/70" />
-                                  )
+                              <div
+                                className={cn(
+                                  "max-w-[80%] rounded-lg p-3 shadow-sm",
+                                  isOwn
+                                    ? "bg-primary text-primary-foreground rounded-br-sm"
+                                    : "bg-muted rounded-bl-sm"
                                 )}
+                              >
+                                {repliedMessage && (
+                                  <div className={cn(
+                                    "text-xs mb-2 p-2 rounded border-l-2",
+                                    isOwn 
+                                      ? "bg-primary-foreground/10 border-primary-foreground/50" 
+                                      : "bg-background/50 border-primary/50"
+                                  )}>
+                                    <p className="font-medium text-[10px] opacity-70">
+                                      {repliedMessage.sender_id === user?.id ? 'You' : selectedThread.participant_name}
+                                    </p>
+                                    <p className="truncate">{repliedMessage.content}</p>
+                                  </div>
+                                )}
+                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                <div className={cn(
+                                  "flex items-center gap-1 mt-1",
+                                  isOwn ? "justify-end" : "justify-start"
+                                )}>
+                                  <p className={cn(
+                                    "text-[10px]",
+                                    isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                                  )}>
+                                    {format(new Date(msg.created_at), 'h:mm a')}
+                                  </p>
+                                  {isOwn && (
+                                    msg.is_read ? (
+                                      <CheckCheck className="h-3.5 w-3.5 text-sky-300" />
+                                    ) : (
+                                      <Check className="h-3.5 w-3.5 text-primary-foreground/70" />
+                                    )
+                                  )}
+                                </div>
                               </div>
+                              {isOwn && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => setReplyingTo(msg)}
+                                >
+                                  <Reply className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );
@@ -620,13 +662,31 @@ export default function Messages() {
                     </div>
                   )}
                 </ScrollArea>
-                <div className="p-4 border-t-2 border-border">
+                <div className="p-4 border-t-2 border-border space-y-2">
+                  {replyingTo && (
+                    <div className="flex items-center justify-between bg-muted p-2 rounded-md">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">
+                          Replying to {replyingTo.sender_id === user?.id ? 'yourself' : selectedThread.participant_name}
+                        </p>
+                        <p className="text-sm truncate">{replyingTo.content}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => setReplyingTo(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Input
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={handleKeyPress}
-                      placeholder="Type a message..."
+                      placeholder={replyingTo ? "Type a reply..." : "Type a message..."}
                       className="flex-1"
                     />
                     <Button
