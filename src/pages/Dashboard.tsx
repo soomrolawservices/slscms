@@ -1,19 +1,22 @@
-import { Users, Briefcase, Calendar, CreditCard, Plus, FileText, Receipt, Clock, TrendingUp, ArrowRight } from 'lucide-react';
+import { Users, Briefcase, Calendar, CreditCard, Plus, FileText, Receipt, Clock, TrendingUp, ArrowRight, Brain } from 'lucide-react';
 import { KpiCard } from '@/components/ui/kpi-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useClients } from '@/hooks/useClients';
 import { useCases } from '@/hooks/useCases';
 import { useAppointments } from '@/hooks/useAppointments';
 import { usePayments } from '@/hooks/usePayments';
+import { AIAnalytics } from '@/components/dashboard/AIAnalytics';
+import { useState } from 'react';
 
 export default function Dashboard() {
   const { profile, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [showAnalytics, setShowAnalytics] = useState(false);
   
   const { data: clients = [] } = useClients();
   const { data: cases = [] } = useCases();
@@ -49,6 +52,14 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant={showAnalytics ? "default" : "outline"}
+            className="gap-2"
+            onClick={() => setShowAnalytics(!showAnalytics)}
+          >
+            <Brain className="h-4 w-4" />
+            {showAnalytics ? 'Hide AI Analytics' : 'AI Analytics'}
+          </Button>
           <Button 
             variant="outline" 
             className="gap-2"
@@ -90,6 +101,9 @@ export default function Dashboard() {
           variant="warning"
         />
       </div>
+
+      {/* AI Analytics Section */}
+      {showAnalytics && <AIAnalytics />}
 
       {/* Quick Actions */}
       <Card className="border-0 shadow-md bg-gradient-to-br from-card to-muted/30 overflow-hidden">

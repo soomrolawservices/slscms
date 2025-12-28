@@ -19,6 +19,8 @@ export interface AppointmentData {
   assigned_to: string | null;
   created_by: string | null;
   created_at: string;
+  reminder_minutes: number | null;
+  reminder_sent: boolean | null;
 }
 
 export function useAppointments() {

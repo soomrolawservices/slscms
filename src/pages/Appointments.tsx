@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Bell, Video, Building, MapPin } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Bell, Video, Building, MapPin, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -24,6 +24,7 @@ import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useAppointments, useCreateAppointment, useUpdateAppointment, useDeleteAppointment, type AppointmentData } from '@/hooks/useAppointments';
 import { useClients } from '@/hooks/useClients';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
+import { ReminderDialog } from '@/components/appointments/ReminderDialog';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -45,6 +46,7 @@ export default function Appointments() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentData | null>(null);
 
   const [formData, setFormData] = useState({
@@ -137,6 +139,25 @@ export default function Appointments() {
       render: (row) => <span>{row.duration || 60} min</span>,
     },
     {
+      key: 'reminder_minutes',
+      header: 'Reminder',
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          {row.reminder_sent ? (
+            <StatusBadge status="completed" />
+          ) : row.reminder_minutes ? (
+            <span className="text-xs text-primary font-medium">
+              {row.reminder_minutes >= 60 
+                ? `${row.reminder_minutes / 60}h before` 
+                : `${row.reminder_minutes}m before`}
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-sm">Not set</span>
+          )}
+        </div>
+      ),
+    },
+    {
       key: 'status',
       header: 'Status',
       render: (row) => <StatusBadge status={row.status} />,
@@ -172,10 +193,8 @@ export default function Appointments() {
   };
 
   const handleSetReminder = (apt: AppointmentData) => {
-    toast({
-      title: 'Reminder set',
-      description: `You'll be notified before the appointment with ${apt.client_name}.`,
-    });
+    setSelectedAppointment(apt);
+    setIsReminderOpen(true);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -192,6 +211,8 @@ export default function Appointments() {
       client_email: formData.client_email || null,
       platform: formData.platform || null,
       status: 'scheduled',
+      reminder_minutes: null,
+      reminder_sent: null,
     });
     setIsCreateOpen(false);
     resetForm();
@@ -230,14 +251,17 @@ export default function Appointments() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Appointments
           </h1>
           <p className="text-muted-foreground">
             Manage your schedule and meetings
           </p>
         </div>
-        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
+        <Button 
+          onClick={() => { resetForm(); setIsCreateOpen(true); }} 
+          className="shadow-md bg-gradient-to-r from-primary to-primary/90"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Schedule Appointment
         </Button>
@@ -271,7 +295,10 @@ export default function Appointments() {
                     <Eye className="h-4 w-4 mr-2" />
                     View
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetReminder(row)}>
+                  <DropdownMenuItem 
+                    onClick={() => handleSetReminder(row)}
+                    className="text-primary"
+                  >
                     <Bell className="h-4 w-4 mr-2" />
                     Set Reminder
                   </DropdownMenuItem>
@@ -496,16 +523,18 @@ export default function Appointments() {
                   <p className="text-sm text-muted-foreground">Status</p>
                   <StatusBadge status={selectedAppointment.status} />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Date</p>
-                  <p className="font-medium">
-                    {format(new Date(selectedAppointment.date), 'MMMM d, yyyy')}
-                  </p>
+                  <p className="font-medium">{format(new Date(selectedAppointment.date), 'MMMM d, yyyy')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Time</p>
                   <p className="font-medium">{selectedAppointment.time}</p>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Client</p>
                   <p className="font-medium">{selectedAppointment.client_name || '-'}</p>
@@ -514,36 +543,61 @@ export default function Appointments() {
                   <p className="text-sm text-muted-foreground">Type</p>
                   <p className="font-medium capitalize">{selectedAppointment.type.replace('-', ' ')}</p>
                 </div>
+              </div>
+              {selectedAppointment.client_email && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{selectedAppointment.client_phone || '-'}</p>
+                  <p className="text-sm text-muted-foreground">Client Email</p>
+                  <p className="font-medium">{selectedAppointment.client_email}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{selectedAppointment.client_email || '-'}</p>
-                </div>
-                {selectedAppointment.platform && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Platform</p>
-                    <p className="font-medium">{selectedAppointment.platform}</p>
-                  </div>
-                )}
+              )}
+              <div className="pt-4 border-t flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="gap-2"
+                  onClick={() => {
+                    setIsViewOpen(false);
+                    handleSetReminder(selectedAppointment);
+                  }}
+                >
+                  <Bell className="h-4 w-4" />
+                  Set Reminder
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    setIsViewOpen(false);
+                    handleEdit(selectedAppointment);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Delete Modal */}
       <ConfirmModal
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
         title="Cancel Appointment"
-        description="Are you sure you want to cancel this appointment?"
-        confirmLabel="Cancel Appointment"
+        description={`Are you sure you want to cancel this appointment with ${selectedAppointment?.client_name}?`}
         onConfirm={handleDelete}
-        variant="destructive"
       />
+
+      {/* Reminder Dialog */}
+      {selectedAppointment && (
+        <ReminderDialog
+          open={isReminderOpen}
+          onOpenChange={setIsReminderOpen}
+          appointmentId={selectedAppointment.id}
+          appointmentTopic={selectedAppointment.topic}
+          currentReminderMinutes={selectedAppointment.reminder_minutes}
+        />
+      )}
     </div>
   );
 }
