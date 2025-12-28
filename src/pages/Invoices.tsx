@@ -89,7 +89,7 @@ export default function Invoices() {
       key: 'amount',
       header: 'Amount',
       sortable: true,
-      render: (row) => <span className="font-bold">${row.amount.toLocaleString()}</span>,
+      render: (row) => <span className="font-bold">PKR {row.amount.toLocaleString()}</span>,
     },
     {
       key: 'client_id',
@@ -140,7 +140,7 @@ export default function Invoices() {
     const invoiceData = [{
       invoice_id: invoice.invoice_id,
       client: invoice.clients?.name || 'Unknown',
-      amount: `$${invoice.amount.toLocaleString()}`,
+      amount: `PKR ${invoice.amount.toLocaleString()}`,
       due_date: invoice.due_date ? format(new Date(invoice.due_date), 'MMM d, yyyy') : '-',
       status: invoice.status,
     }];
@@ -159,11 +159,11 @@ export default function Invoices() {
     toast({ title: 'Exporting PDF', description: `Downloading ${invoice.invoice_id}.pdf` });
   };
 
-  const handlePrintInvoice = (invoice: InvoiceWithRelations) => {
+  const handlePrintInvoice = async (invoice: InvoiceWithRelations) => {
     const client = clients.find(c => c.id === invoice.client_id);
     const caseData = (cases as { id: string; title: string }[]).find(c => c.id === invoice.case_id);
     
-    generateInvoicePDF({
+    await generateInvoicePDF({
       invoice_id: invoice.invoice_id,
       amount: invoice.amount,
       status: invoice.status,
@@ -267,7 +267,7 @@ export default function Invoices() {
           <DialogHeader><DialogTitle>Create Invoice</DialogTitle><DialogDescription>Enter the invoice details below.</DialogDescription></DialogHeader>
           <form onSubmit={handleCreate}>
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2"><Label htmlFor="amount">Amount ($)</Label><Input id="amount" type="number" min="0" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} required /></div>
+              <div className="grid gap-2"><Label htmlFor="amount">Amount (PKR)</Label><Input id="amount" type="number" min="0" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} required /></div>
               <div className="grid gap-2"><Label>Client</Label><SearchableCombobox options={clientOptions} value={formData.client_id} onChange={(value) => setFormData({ ...formData, client_id: value })} placeholder="Select client..." /></div>
               <div className="grid gap-2"><Label>Case (optional)</Label><SearchableCombobox options={caseOptions} value={formData.case_id} onChange={(value) => setFormData({ ...formData, case_id: value })} placeholder="Select case..." /></div>
               <div className="grid gap-2"><Label htmlFor="due_date">Due Date</Label><Input id="due_date" type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} /></div>
@@ -283,7 +283,7 @@ export default function Invoices() {
           <DialogHeader><DialogTitle>Edit Invoice</DialogTitle></DialogHeader>
           <form onSubmit={handleUpdate}>
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2"><Label htmlFor="edit-amount">Amount ($)</Label><Input id="edit-amount" type="number" min="0" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} required /></div>
+              <div className="grid gap-2"><Label htmlFor="edit-amount">Amount (PKR)</Label><Input id="edit-amount" type="number" min="0" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} required /></div>
               <div className="grid gap-2"><Label>Client</Label><SearchableCombobox options={clientOptions} value={formData.client_id} onChange={(value) => setFormData({ ...formData, client_id: value })} placeholder="Select client..." /></div>
               <div className="grid gap-2"><Label>Status</Label><SearchableCombobox options={[{ value: 'unpaid', label: 'Unpaid' }, { value: 'paid', label: 'Paid' }, { value: 'overdue', label: 'Overdue' }, { value: 'partial', label: 'Partial' }]} value={formData.status} onChange={(value) => setFormData({ ...formData, status: value })} /></div>
               <div className="grid gap-2"><Label htmlFor="edit-due_date">Due Date</Label><Input id="edit-due_date" type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} /></div>
@@ -301,7 +301,7 @@ export default function Invoices() {
             <div className="grid grid-cols-2 gap-4">
               <div><p className="text-sm text-muted-foreground">Invoice ID</p><p className="font-mono font-medium">{selectedInvoice.invoice_id}</p></div>
               <div><p className="text-sm text-muted-foreground">Status</p><StatusBadge status={selectedInvoice.status} /></div>
-              <div><p className="text-sm text-muted-foreground">Amount</p><p className="font-bold">${selectedInvoice.amount.toLocaleString()}</p></div>
+              <div><p className="text-sm text-muted-foreground">Amount</p><p className="font-bold">PKR {selectedInvoice.amount.toLocaleString()}</p></div>
               <div><p className="text-sm text-muted-foreground">Client</p><p className="font-medium">{selectedInvoice.clients?.name || 'Unknown'}</p></div>
               <div><p className="text-sm text-muted-foreground">Case</p><p className="font-medium">{selectedInvoice.cases?.title || '-'}</p></div>
               <div><p className="text-sm text-muted-foreground">Due Date</p><p className="font-medium">{selectedInvoice.due_date ? format(new Date(selectedInvoice.due_date), 'MMM d, yyyy') : '-'}</p></div>
