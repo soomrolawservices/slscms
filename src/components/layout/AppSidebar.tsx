@@ -14,7 +14,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  UserPlus
+  UserPlus,
+  BarChart3
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,7 @@ const adminNavItems = [
   { title: 'Appointments', url: '/appointments', icon: Calendar },
   { title: 'Credentials', url: '/credentials', icon: Key },
   { title: 'Assignments', url: '/assignments', icon: UserPlus },
+  { title: 'Reports', url: '/reports', icon: BarChart3 },
   { title: 'Users', url: '/users', icon: UserCog },
   { title: 'Permissions', url: '/permissions', icon: Shield },
   { title: 'Settings', url: '/settings', icon: Settings },

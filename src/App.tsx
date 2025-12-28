@@ -27,6 +27,7 @@ import ClientPortal from "./pages/ClientPortal";
 import ClientLogin from "./pages/ClientLogin";
 import ClientSignup from "./pages/ClientSignup";
 import Notifications from "./pages/Notifications";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/assignments" element={<Assignments />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/reports" element={<Reports />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
