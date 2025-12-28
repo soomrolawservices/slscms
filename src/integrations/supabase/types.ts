@@ -57,6 +57,8 @@ export type Database = {
           duration: number | null
           id: string
           platform: string | null
+          reminder_minutes: number | null
+          reminder_sent: boolean | null
           status: string
           time: string
           topic: string
@@ -75,6 +77,8 @@ export type Database = {
           duration?: number | null
           id?: string
           platform?: string | null
+          reminder_minutes?: number | null
+          reminder_sent?: boolean | null
           status?: string
           time: string
           topic: string
@@ -93,6 +97,8 @@ export type Database = {
           duration?: number | null
           id?: string
           platform?: string | null
+          reminder_minutes?: number | null
+          reminder_sent?: boolean | null
           status?: string
           time?: string
           topic?: string
@@ -429,6 +435,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -561,6 +603,42 @@ export type Database = {
           phone?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_permissions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          granted_by: string | null
+          id: string
+          module: string
+          permission_type: string
+          pin_protected: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          module: string
+          permission_type: string
+          pin_protected?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          module?: string
+          permission_type?: string
+          pin_protected?: boolean | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
