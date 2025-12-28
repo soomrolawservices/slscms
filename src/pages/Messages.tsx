@@ -1,12 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, ArrowLeft, User } from 'lucide-react';
+import { MessageSquare, Send, ArrowLeft, User, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClients } from '@/hooks/useClients';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -37,8 +48,13 @@ interface Message {
 export default function Messages() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { data: clients = [] } = useClients();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
+  const [isNewConvOpen, setIsNewConvOpen] = useState(false);
+  const [newConvClientId, setNewConvClientId] = useState('');
+  const [newConvSubject, setNewConvSubject] = useState('');
+  const [newConvMessage, setNewConvMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch all conversations with client info
@@ -176,6 +192,61 @@ export default function Messages() {
     }
   };
 
+  // Create new conversation mutation
+  const createConversation = useMutation({
+    mutationFn: async ({ clientId, subject, firstMessage }: { clientId: string; subject: string; firstMessage: string }) => {
+      // Create conversation
+      const { data: conv, error: convError } = await supabase
+        .from('conversations')
+        .insert({
+          client_id: clientId,
+          team_member_id: user?.id,
+          subject,
+        })
+        .select()
+        .single();
+
+      if (convError) throw convError;
+
+      // Send first message
+      const { error: msgError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conv.id,
+          sender_id: user?.id,
+          client_id: clientId,
+          content: firstMessage,
+        });
+
+      if (msgError) throw msgError;
+
+      return conv;
+    },
+    onSuccess: (conv) => {
+      queryClient.invalidateQueries({ queryKey: ['staff-conversations'] });
+      setIsNewConvOpen(false);
+      setNewConvClientId('');
+      setNewConvSubject('');
+      setNewConvMessage('');
+      setSelectedConversation(conv.id);
+      toast({ title: 'Conversation started' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error creating conversation', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleCreateConversation = () => {
+    if (!newConvClientId || !newConvSubject.trim() || !newConvMessage.trim()) return;
+    createConversation.mutate({
+      clientId: newConvClientId,
+      subject: newConvSubject.trim(),
+      firstMessage: newConvMessage.trim(),
+    });
+  };
+
+  const clientOptions = clients.map(c => ({ value: c.id, label: c.name }));
+
   if (loadingConversations) {
     return (
       <div className="space-y-6">
@@ -191,13 +262,19 @@ export default function Messages() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-          Client Messages
-        </h1>
-        <p className="text-muted-foreground">
-          Respond to client inquiries and conversations
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            Client Messages
+          </h1>
+          <p className="text-muted-foreground">
+            Respond to client inquiries and conversations
+          </p>
+        </div>
+        <Button onClick={() => setIsNewConvOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Conversation
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -353,6 +430,59 @@ export default function Messages() {
           )}
         </Card>
       </div>
+
+      {/* New Conversation Dialog */}
+      <Dialog open={isNewConvOpen} onOpenChange={setIsNewConvOpen}>
+        <DialogContent className="border-2 border-border">
+          <DialogHeader>
+            <DialogTitle>Start New Conversation</DialogTitle>
+            <DialogDescription>
+              Select a client and start a conversation with them.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <SearchableCombobox
+                options={clientOptions}
+                value={newConvClientId}
+                onChange={setNewConvClientId}
+                placeholder="Select a client..."
+                searchPlaceholder="Search clients..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                value={newConvSubject}
+                onChange={(e) => setNewConvSubject(e.target.value)}
+                placeholder="e.g., Case Update, Follow-up"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="first-message">Message</Label>
+              <Input
+                id="first-message"
+                value={newConvMessage}
+                onChange={(e) => setNewConvMessage(e.target.value)}
+                placeholder="Type your message..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewConvOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateConversation}
+              disabled={!newConvClientId || !newConvSubject.trim() || !newConvMessage.trim() || createConversation.isPending}
+            >
+              {createConversation.isPending ? 'Starting...' : 'Start Conversation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
