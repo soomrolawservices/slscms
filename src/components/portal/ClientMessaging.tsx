@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Plus, ArrowLeft, Check, CheckCheck, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +17,6 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
-import { useConversations, useMessages, useCreateConversation, useSendMessage, useMarkMessagesRead } from '@/hooks/useMessages';
 import { useClientPortalData } from '@/hooks/useClientPortal';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,14 +33,34 @@ interface TeamMember {
   email: string;
 }
 
+interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  receiver_id: string | null;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+interface ChatThread {
+  id: string;
+  team_member_id: string;
+  team_member_name: string;
+  team_member_email: string;
+  last_message: string;
+  last_message_time: string;
+  unread_count: number;
+  conversation_id: string;
+}
+
 export function ClientMessaging() {
   const { user, profile } = useAuth();
   const { client } = useClientPortalData();
   const queryClient = useQueryClient();
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [selectedThread, setSelectedThread] = useState<ChatThread | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isNewOpen, setIsNewOpen] = useState(false);
-  const [newSubject, setNewSubject] = useState('');
   const [selectedTeamMember, setSelectedTeamMember] = useState('');
   const [firstMessage, setFirstMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -67,28 +88,118 @@ export function ClientMessaging() {
     enabled: !!user,
   });
 
-  const { data: conversations = [], isLoading: loadingConversations } = useConversations(client?.id);
-  const { data: messages = [], isLoading: loadingMessages } = useMessages(selectedConversation || '');
-  const createConversation = useCreateConversation();
-  const sendMessage = useSendMessage();
-  const markRead = useMarkMessagesRead();
+  // Fetch chat threads - group by team member (single thread per team member like WhatsApp)
+  const { data: chatThreads = [], isLoading: loadingThreads } = useQuery({
+    queryKey: ['client-chat-threads', client?.id],
+    queryFn: async () => {
+      if (!client?.id) return [];
+
+      // Get all conversations for this client
+      const { data: conversations, error: convError } = await supabase
+        .from('conversations')
+        .select('id, team_member_id, updated_at')
+        .eq('client_id', client.id)
+        .order('updated_at', { ascending: false });
+
+      if (convError) throw convError;
+      if (!conversations || conversations.length === 0) return [];
+
+      // Group conversations by team_member_id (take the most recent one per team member)
+      const teamMemberConvMap = new Map<string, typeof conversations[0]>();
+      conversations.forEach(conv => {
+        if (conv.team_member_id && !teamMemberConvMap.has(conv.team_member_id)) {
+          teamMemberConvMap.set(conv.team_member_id, conv);
+        }
+      });
+
+      // Get unique team member IDs
+      const teamMemberIds = Array.from(teamMemberConvMap.keys());
+      if (teamMemberIds.length === 0) return [];
+
+      // Get team member profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', teamMemberIds);
+
+      // Get last message and unread count for each thread
+      const threads: ChatThread[] = [];
+      
+      for (const [tmId, conv] of teamMemberConvMap.entries()) {
+        const teamMemberProfile = profiles?.find(p => p.id === tmId);
+        if (!teamMemberProfile) continue;
+
+        // Get last message for this conversation
+        const { data: lastMsg } = await supabase
+          .from('messages')
+          .select('content, created_at')
+          .eq('conversation_id', conv.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Get unread count
+        const { count: unreadCount } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', conv.id)
+          .eq('is_read', false)
+          .neq('sender_id', user?.id);
+
+        threads.push({
+          id: tmId,
+          team_member_id: tmId,
+          team_member_name: teamMemberProfile.name,
+          team_member_email: teamMemberProfile.email,
+          last_message: lastMsg?.content || '',
+          last_message_time: lastMsg?.created_at || conv.updated_at,
+          unread_count: unreadCount || 0,
+          conversation_id: conv.id,
+        });
+      }
+
+      return threads.sort((a, b) => 
+        new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime()
+      );
+    },
+    enabled: !!user && !!client?.id,
+  });
+
+  // Fetch messages for selected thread
+  const { data: messages = [], isLoading: loadingMessages } = useQuery({
+    queryKey: ['client-thread-messages', selectedThread?.conversation_id],
+    queryFn: async () => {
+      if (!selectedThread?.conversation_id) return [];
+      
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', selectedThread.conversation_id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data as Message[];
+    },
+    enabled: !!selectedThread?.conversation_id,
+  });
 
   // Real-time subscription for messages
   useEffect(() => {
-    if (!selectedConversation) return;
+    if (!selectedThread?.conversation_id) return;
 
     const channel = supabase
-      .channel(`client-messages-${selectedConversation}`)
+      .channel(`client-messages-${selectedThread.conversation_id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `conversation_id=eq.${selectedConversation}`,
+          filter: `conversation_id=eq.${selectedThread.conversation_id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['messages', selectedConversation] });
+          queryClient.invalidateQueries({ queryKey: ['client-thread-messages', selectedThread.conversation_id] });
+          queryClient.invalidateQueries({ queryKey: ['client-chat-threads', client?.id] });
         }
       )
       .subscribe();
@@ -96,79 +207,115 @@ export function ClientMessaging() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedConversation, queryClient]);
+  }, [selectedThread?.conversation_id, queryClient, client?.id]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mark messages as read when viewing conversation
+  // Mark messages as read when viewing thread
   useEffect(() => {
-    if (selectedConversation) {
-      markRead.mutate(selectedConversation);
+    if (selectedThread?.conversation_id) {
+      supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('conversation_id', selectedThread.conversation_id)
+        .neq('sender_id', user?.id)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['client-chat-threads', client?.id] });
+        });
     }
-  }, [selectedConversation]);
+  }, [selectedThread?.conversation_id, user?.id, queryClient, client?.id]);
 
-  const handleCreateConversation = async () => {
-    if (!client?.id || !newSubject.trim() || !firstMessage.trim()) {
+  const handleStartNewChat = async () => {
+    if (!client?.id || !selectedTeamMember || !firstMessage.trim()) {
       toast({
         title: 'Cannot start conversation',
-        description: client?.id ? 'Please fill in subject and message' : 'Your account is not linked to a client profile yet.',
+        description: client?.id ? 'Please select a team member and enter a message' : 'Your account is not linked to a client profile yet.',
         variant: 'destructive',
       });
       return;
     }
     
     try {
-      // Create conversation with team member
-      const { data: conv, error: convError } = await supabase
-        .from('conversations')
-        .insert({
-          client_id: client.id,
-          team_member_id: selectedTeamMember || null,
-          subject: newSubject.trim(),
-        })
-        .select()
-        .single();
+      // Check if conversation already exists with this team member
+      const existingThread = chatThreads.find(t => t.team_member_id === selectedTeamMember);
+      
+      let conversationId: string;
+      
+      if (existingThread) {
+        // Use existing conversation
+        conversationId = existingThread.conversation_id;
+      } else {
+        // Create new conversation
+        const teamMember = teamMembers.find(tm => tm.id === selectedTeamMember);
+        const { data: conv, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            client_id: client.id,
+            team_member_id: selectedTeamMember,
+            subject: `Chat with ${teamMember?.name || 'Team Member'}`,
+          })
+          .select()
+          .single();
 
-      if (convError) throw convError;
+        if (convError) throw convError;
+        conversationId = conv.id;
+      }
 
-      // Send first message
+      // Send message
       const { error: msgError } = await supabase
         .from('messages')
         .insert({
-          conversation_id: conv.id,
+          conversation_id: conversationId,
           sender_id: user?.id,
           client_id: client.id,
-          receiver_id: selectedTeamMember || null,
+          receiver_id: selectedTeamMember,
           content: firstMessage.trim(),
         });
 
       if (msgError) throw msgError;
 
-      // Create notification for the team member
-      if (selectedTeamMember) {
-        await createNotification({
-          userId: selectedTeamMember,
-          title: 'New Message from Client',
-          message: `${profile?.name || 'A client'} started a conversation: ${newSubject.trim()}`,
-          type: 'info',
-          entityType: 'conversation',
-          entityId: conv.id,
-        });
-      }
+      // Update conversation timestamp
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
 
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      setNewSubject('');
+      // Create notification for the team member
+      await createNotification({
+        userId: selectedTeamMember,
+        title: 'New Message from Client',
+        message: `${profile?.name || 'A client'}: ${firstMessage.trim().substring(0, 50)}${firstMessage.length > 50 ? '...' : ''}`,
+        type: 'info',
+        entityType: 'conversation',
+        entityId: conversationId,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['client-chat-threads', client?.id] });
+      
+      // Find or create the thread to select
+      const teamMember = teamMembers.find(tm => tm.id === selectedTeamMember);
+      setSelectedThread({
+        id: selectedTeamMember,
+        team_member_id: selectedTeamMember,
+        team_member_name: teamMember?.name || 'Team Member',
+        team_member_email: teamMember?.email || '',
+        last_message: firstMessage.trim(),
+        last_message_time: new Date().toISOString(),
+        unread_count: 0,
+        conversation_id: conversationId,
+      });
+      
       setFirstMessage('');
       setSelectedTeamMember('');
       setIsNewOpen(false);
-      setSelectedConversation(conv.id);
+      toast({ title: 'Message sent' });
     } catch (error: any) {
-      console.error('Error creating conversation:', error);
+      console.error('Error:', error);
       toast({
-        title: 'Error creating conversation',
+        title: 'Error',
         description: error.message || 'Something went wrong',
         variant: 'destructive',
       });
@@ -176,30 +323,48 @@ export function ClientMessaging() {
   };
 
   const handleSendMessage = async () => {
-    if (!selectedConversation || !newMessage.trim() || !client?.id) return;
+    if (!selectedThread || !newMessage.trim() || !client?.id) return;
     
-    const conversation = conversations.find(c => c.id === selectedConversation);
-    
-    await sendMessage.mutateAsync({
-      conversationId: selectedConversation,
-      content: newMessage.trim(),
-      clientId: client.id,
-      receiverId: conversation?.team_member_id || undefined,
-    });
+    try {
+      const { error: msgError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: selectedThread.conversation_id,
+          sender_id: user?.id,
+          client_id: client.id,
+          receiver_id: selectedThread.team_member_id,
+          content: newMessage.trim(),
+        });
 
-    // Notify team member
-    if (conversation?.team_member_id) {
+      if (msgError) throw msgError;
+
+      // Update conversation timestamp
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', selectedThread.conversation_id);
+
+      // Notify team member
       await createNotification({
-        userId: conversation.team_member_id,
+        userId: selectedThread.team_member_id,
         title: 'New Message',
         message: `${profile?.name || 'Client'}: ${newMessage.trim().substring(0, 50)}${newMessage.length > 50 ? '...' : ''}`,
         type: 'info',
         entityType: 'conversation',
-        entityId: selectedConversation,
+        entityId: selectedThread.conversation_id,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['client-thread-messages', selectedThread.conversation_id] });
+      queryClient.invalidateQueries({ queryKey: ['client-chat-threads', client?.id] });
+      setNewMessage('');
+    } catch (error: any) {
+      console.error('Error:', error);
+      toast({
+        title: 'Error sending message',
+        description: error.message || 'Something went wrong',
+        variant: 'destructive',
       });
     }
-    
-    setNewMessage('');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -209,17 +374,16 @@ export function ClientMessaging() {
     }
   };
 
-  const teamMemberOptions = teamMembers.map((tm) => ({
+  // Filter out team members who already have a chat thread
+  const availableTeamMembers = teamMembers.filter(
+    tm => !chatThreads.some(t => t.team_member_id === tm.id)
+  );
+  const teamMemberOptions = availableTeamMembers.map((tm) => ({
     value: tm.id,
     label: tm.name,
   }));
 
-  // Count unread messages per conversation
-  const getUnreadCount = (conversationId: string) => {
-    return messages.filter(m => m.conversation_id === conversationId && !m.is_read && m.sender_id !== user?.id).length;
-  };
-
-  if (loadingConversations) {
+  if (loadingThreads) {
     return (
       <Card className="border-2 border-border">
         <CardHeader>
@@ -232,8 +396,8 @@ export function ClientMessaging() {
     );
   }
 
-  // Conversation list view
-  if (!selectedConversation) {
+  // Chat list view (like WhatsApp)
+  if (!selectedThread) {
     return (
       <div className="space-y-4">
         <Card className="border-2 border-border">
@@ -244,38 +408,52 @@ export function ClientMessaging() {
                   <MessageSquare className="h-5 w-5" />
                   Messages
                 </CardTitle>
-                <CardDescription>Communicate with your legal team</CardDescription>
+                <CardDescription>Chat with your legal team</CardDescription>
               </div>
               <Button onClick={() => setIsNewOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                New Message
+                New Chat
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            {conversations.length === 0 ? (
+          <CardContent className="p-0">
+            {chatThreads.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No conversations yet</p>
-                <p className="text-sm">Start a new conversation to get help</p>
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No chats yet</p>
+                <p className="text-sm">Start a new chat with a team member</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {conversations.map((conv) => (
+              <div className="divide-y divide-border">
+                {chatThreads.map((thread) => (
                   <div
-                    key={conv.id}
-                    onClick={() => setSelectedConversation(conv.id)}
-                    className="p-4 border-2 border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    key={thread.id}
+                    onClick={() => setSelectedThread(thread)}
+                    className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">{conv.subject}</h4>
-                      <Badge variant={conv.status === 'open' ? 'default' : 'secondary'}>
-                        {conv.status}
-                      </Badge>
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                        {thread.team_member_name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium truncate">{thread.team_member_name}</h4>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(thread.last_message_time), 'MMM d')}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-sm text-muted-foreground truncate max-w-[200px]">
+                          {thread.last_message}
+                        </p>
+                        {thread.unread_count > 0 && (
+                          <Badge variant="default" className="h-5 min-w-[20px] justify-center">
+                            {thread.unread_count}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {format(new Date(conv.updated_at), 'MMM d, yyyy h:mm a')}
-                    </p>
                   </div>
                 ))}
               </div>
@@ -283,18 +461,18 @@ export function ClientMessaging() {
           </CardContent>
         </Card>
 
-        {/* New Conversation Dialog */}
+        {/* New Chat Dialog */}
         <Dialog open={isNewOpen} onOpenChange={setIsNewOpen}>
           <DialogContent className="border-2 border-border">
             <DialogHeader>
-              <DialogTitle>Start New Conversation</DialogTitle>
+              <DialogTitle>Start New Chat</DialogTitle>
               <DialogDescription>
-                Send a message to a team member
+                Select a team member to chat with
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Team Member (Optional)</Label>
+                <Label>Team Member</Label>
                 <SearchableCombobox
                   options={teamMemberOptions}
                   value={selectedTeamMember}
@@ -302,26 +480,20 @@ export function ClientMessaging() {
                   placeholder="Select a team member..."
                   searchPlaceholder="Search team members..."
                 />
-                <p className="text-xs text-muted-foreground">
-                  Leave empty to send to all team members
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="subject">Subject</Label>
-                <Input
-                  id="subject"
-                  value={newSubject}
-                  onChange={(e) => setNewSubject(e.target.value)}
-                  placeholder="e.g., Question about my case"
-                />
+                {teamMemberOptions.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    You already have chats with all team members
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="first-message">Message</Label>
-                <Input
+                <Textarea
                   id="first-message"
                   value={firstMessage}
                   onChange={(e) => setFirstMessage(e.target.value)}
                   placeholder="Type your message..."
+                  rows={3}
                 />
               </div>
             </div>
@@ -330,10 +502,10 @@ export function ClientMessaging() {
                 Cancel
               </Button>
               <Button 
-                onClick={handleCreateConversation}
-                disabled={!newSubject.trim() || !firstMessage.trim()}
+                onClick={handleStartNewChat}
+                disabled={!selectedTeamMember || !firstMessage.trim()}
               >
-                Start Conversation
+                Send Message
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -342,25 +514,26 @@ export function ClientMessaging() {
     );
   }
 
-  // Conversation detail view
-  const currentConversation = conversations.find(c => c.id === selectedConversation);
-
+  // Chat detail view (like WhatsApp conversation)
   return (
     <Card className="border-2 border-border">
-      <CardHeader className="border-b-2 border-border">
+      <CardHeader className="border-b-2 border-border py-3">
         <div className="flex items-center gap-3">
           <Button 
             variant="ghost" 
             size="icon"
-            onClick={() => setSelectedConversation(null)}
+            onClick={() => setSelectedThread(null)}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
+          <Avatar className="h-10 w-10">
+            <AvatarFallback className="bg-primary/10 text-primary font-medium">
+              {selectedThread.team_member_name.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
           <div>
-            <CardTitle className="text-lg">{currentConversation?.subject}</CardTitle>
-            <CardDescription>
-              Started {currentConversation && format(new Date(currentConversation.created_at), 'MMM d, yyyy')}
-            </CardDescription>
+            <CardTitle className="text-base">{selectedThread.team_member_name}</CardTitle>
+            <CardDescription className="text-xs">{selectedThread.team_member_email}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -369,7 +542,9 @@ export function ClientMessaging() {
           {loadingMessages ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 w-3/4" />
+                <div key={i} className={cn("flex", i % 2 === 0 ? "justify-end" : "justify-start")}>
+                  <Skeleton className="h-16 w-3/4 rounded-lg" />
+                </div>
               ))}
             </div>
           ) : messages.length === 0 ? (
@@ -377,7 +552,7 @@ export function ClientMessaging() {
               <p>No messages yet. Start the conversation!</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {messages.map((msg) => {
                 const isOwn = msg.sender_id === user?.id;
                 return (
@@ -390,28 +565,34 @@ export function ClientMessaging() {
                   >
                     <div
                       className={cn(
-                        "max-w-[80%] rounded-lg p-3",
+                        "max-w-[80%] rounded-lg p-3 shadow-sm",
                         isOwn
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted rounded-bl-sm"
                       )}
                     >
-                      <p className="text-sm">{msg.content}</p>
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                       <div className={cn(
                         "flex items-center gap-1 mt-1",
                         isOwn ? "justify-end" : "justify-start"
                       )}>
                         <p className={cn(
-                          "text-xs",
+                          "text-[10px]",
                           isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
                         )}>
                           {format(new Date(msg.created_at), 'h:mm a')}
                         </p>
                         {isOwn && (
                           msg.is_read ? (
-                            <CheckCheck className={cn("h-3 w-3", "text-primary-foreground/70")} />
+                            <CheckCheck className={cn(
+                              "h-3.5 w-3.5",
+                              "text-sky-300"  // Blue tick for read
+                            )} />
                           ) : (
-                            <Check className={cn("h-3 w-3", "text-primary-foreground/70")} />
+                            <Check className={cn(
+                              "h-3.5 w-3.5",
+                              "text-primary-foreground/70"  // Single tick for sent
+                            )} />
                           )
                         )}
                       </div>
@@ -428,13 +609,13 @@ export function ClientMessaging() {
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
+              onKeyDown={handleKeyPress}
+              placeholder="Type a message..."
               className="flex-1"
             />
             <Button 
               onClick={handleSendMessage}
-              disabled={!newMessage.trim() || sendMessage.isPending}
+              disabled={!newMessage.trim()}
             >
               <Send className="h-4 w-4" />
             </Button>
