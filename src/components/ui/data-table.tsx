@@ -19,6 +19,7 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { exportToCSV, exportToPDF } from '@/lib/export-utils';
 import { toast } from '@/hooks/use-toast';
@@ -40,6 +41,9 @@ interface DataTableProps<T> {
   actions?: (row: T) => React.ReactNode;
   title?: string;
   isLoading?: boolean;
+  selectable?: boolean;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -52,11 +56,34 @@ export function DataTable<T extends { id: string }>({
   actions,
   title = 'Data',
   isLoading = false,
+  selectable = false,
+  selectedIds = [],
+  onSelectionChange,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<keyof T | string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleSelectAll = () => {
+    if (!onSelectionChange) return;
+    const allIds = data.map(item => item.id);
+    const allSelected = allIds.every(id => selectedIds.includes(id));
+    if (allSelected) {
+      onSelectionChange([]);
+    } else {
+      onSelectionChange(allIds);
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    if (!onSelectionChange) return;
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter(i => i !== id));
+    } else {
+      onSelectionChange([...selectedIds, id]);
+    }
+  };
 
   // Filter data based on search
   const filteredData = searchKey
@@ -160,6 +187,14 @@ export function DataTable<T extends { id: string }>({
         <Table>
           <TableHeader>
             <TableRow className="border-b-2 border-border bg-muted/50">
+              {selectable && (
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={data.length > 0 && data.every(item => selectedIds.includes(item.id))}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
+              )}
               {columns.map((column) => (
                 <TableHead
                   key={String(column.key)}
@@ -182,7 +217,7 @@ export function DataTable<T extends { id: string }>({
             {paginatedData.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length + (actions ? 1 : 0)}
+                  colSpan={columns.length + (actions ? 1 : 0) + (selectable ? 1 : 0)}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No results found
@@ -194,10 +229,19 @@ export function DataTable<T extends { id: string }>({
                   key={row.id}
                   className={cn(
                     "border-b border-border",
-                    onRowClick && "cursor-pointer hover:bg-accent"
+                    onRowClick && "cursor-pointer hover:bg-accent",
+                    selectable && selectedIds.includes(row.id) && "bg-muted/50"
                   )}
                   onClick={() => onRowClick?.(row)}
                 >
+                  {selectable && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.includes(row.id)}
+                        onCheckedChange={() => handleSelectRow(row.id)}
+                      />
+                    </TableCell>
+                  )}
                   {columns.map((column) => (
                     <TableCell key={String(column.key)}>
                       {column.render

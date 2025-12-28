@@ -26,6 +26,7 @@ import { useCases, useCreateCase, useUpdateCase, useDeleteCase } from '@/hooks/u
 import { useClients } from '@/hooks/useClients';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
+import { BulkAssignment } from '@/components/assignments/BulkAssignment';
 import { format } from 'date-fns';
 
 interface CaseWithClient {
@@ -55,6 +56,7 @@ export default function Cases() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<CaseWithClient | null>(null);
+  const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -170,12 +172,20 @@ export default function Cases() {
             Manage legal cases and matters
           </p>
         </div>
-        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
-          <Plus className="h-4 w-4 mr-2" />
-          New Case
-        </Button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <BulkAssignment
+              type="cases"
+              selectedIds={selectedCaseIds}
+              onComplete={() => setSelectedCaseIds([])}
+            />
+          )}
+          <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
+            <Plus className="h-4 w-4 mr-2" />
+            New Case
+          </Button>
+        </div>
       </div>
-
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="border-2 border-border">
@@ -191,6 +201,9 @@ export default function Cases() {
             searchKey="title"
             title="Cases"
             isLoading={isLoading}
+            selectable={isAdmin}
+            selectedIds={selectedCaseIds}
+            onSelectionChange={setSelectedCaseIds}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
