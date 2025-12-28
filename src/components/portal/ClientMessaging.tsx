@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createNotification } from '@/hooks/useCreateNotification';
+import { toast } from '@/hooks/use-toast';
 
 interface TeamMember {
   id: string;
@@ -110,7 +111,14 @@ export function ClientMessaging() {
   }, [selectedConversation]);
 
   const handleCreateConversation = async () => {
-    if (!client?.id || !newSubject.trim() || !firstMessage.trim()) return;
+    if (!client?.id || !newSubject.trim() || !firstMessage.trim()) {
+      toast({
+        title: 'Cannot start conversation',
+        description: client?.id ? 'Please fill in subject and message' : 'Your account is not linked to a client profile yet.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     try {
       // Create conversation with team member
@@ -159,6 +167,11 @@ export function ClientMessaging() {
       setSelectedConversation(conv.id);
     } catch (error: any) {
       console.error('Error creating conversation:', error);
+      toast({
+        title: 'Error creating conversation',
+        description: error.message || 'Something went wrong',
+        variant: 'destructive',
+      });
     }
   };
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -26,6 +26,7 @@ import { useClients } from '@/hooks/useClients';
 import { useCases } from '@/hooks/useCases';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { exportToPDF } from '@/lib/export-utils';
+import { generateInvoicePDF } from '@/components/invoice/InvoicePDF';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -158,6 +159,26 @@ export default function Invoices() {
     toast({ title: 'Exporting PDF', description: `Downloading ${invoice.invoice_id}.pdf` });
   };
 
+  const handlePrintInvoice = (invoice: InvoiceWithRelations) => {
+    const client = clients.find(c => c.id === invoice.client_id);
+    const caseData = (cases as { id: string; title: string }[]).find(c => c.id === invoice.case_id);
+    
+    generateInvoicePDF({
+      invoice_id: invoice.invoice_id,
+      amount: invoice.amount,
+      status: invoice.status,
+      due_date: invoice.due_date,
+      created_at: invoice.created_at,
+      client: client ? {
+        name: client.name,
+        email: client.email || undefined,
+        phone: client.phone || undefined,
+        cnic: client.cnic || undefined,
+      } : undefined,
+      case: caseData ? { title: caseData.title } : undefined,
+    });
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     await createInvoice.mutateAsync({
@@ -229,6 +250,7 @@ export default function Invoices() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-popover border-2 border-border">
                   <DropdownMenuItem onClick={() => handleView(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handlePrintInvoice(row)}><Printer className="h-4 w-4 mr-2" />Print Invoice</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleExportPDF(row)}><Download className="h-4 w-4 mr-2" />Export PDF</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleEdit(row)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(row)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
