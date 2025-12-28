@@ -52,14 +52,16 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant={showAnalytics ? "default" : "outline"}
-            className="gap-2"
-            onClick={() => setShowAnalytics(!showAnalytics)}
-          >
-            <Brain className="h-4 w-4" />
-            {showAnalytics ? 'Hide AI Analytics' : 'AI Analytics'}
-          </Button>
+          {isAdmin && (
+            <Button 
+              variant={showAnalytics ? "default" : "outline"}
+              className="gap-2"
+              onClick={() => setShowAnalytics(!showAnalytics)}
+            >
+              <Brain className="h-4 w-4" />
+              {showAnalytics ? 'Hide AI Analytics' : 'AI Analytics'}
+            </Button>
+          )}
           <Button 
             variant="outline" 
             className="gap-2"

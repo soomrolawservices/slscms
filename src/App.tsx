@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -55,24 +56,91 @@ const App = () => (
               <Route path="/portal" element={<ClientPortal />} />
             </Route>
             
-            {/* Protected Routes - Admin/Team */}
+            {/* Protected Routes - Admin/Team Only */}
             <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/cases" element={<Cases />} />
-              <Route path="/documents" element={<Documents />} />
-              <Route path="/payments" element={<Payments />} />
-              <Route path="/invoices" element={<Invoices />} />
-              <Route path="/expenses" element={<Expenses />} />
-              <Route path="/appointments" element={<Appointments />} />
-              <Route path="/credentials" element={<Credentials />} />
-              <Route path="/users" element={<Users />} />
-              <Route path="/permissions" element={<Permissions />} />
-              <Route path="/assignments" element={<Assignments />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/messages" element={<Messages />} />
+              {/* Pages accessible by both Admin and Team Members */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/clients" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Clients />
+                </ProtectedRoute>
+              } />
+              <Route path="/cases" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Cases />
+                </ProtectedRoute>
+              } />
+              <Route path="/documents" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Documents />
+                </ProtectedRoute>
+              } />
+              <Route path="/payments" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Payments />
+                </ProtectedRoute>
+              } />
+              <Route path="/expenses" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Expenses />
+                </ProtectedRoute>
+              } />
+              <Route path="/appointments" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Appointments />
+                </ProtectedRoute>
+              } />
+              <Route path="/messages" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Messages />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/notifications" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <Notifications />
+                </ProtectedRoute>
+              } />
+              
+              {/* Admin-Only Pages */}
+              <Route path="/invoices" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Invoices />
+                </ProtectedRoute>
+              } />
+              <Route path="/credentials" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Credentials />
+                </ProtectedRoute>
+              } />
+              <Route path="/users" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Users />
+                </ProtectedRoute>
+              } />
+              <Route path="/permissions" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Permissions />
+                </ProtectedRoute>
+              } />
+              <Route path="/assignments" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Assignments />
+                </ProtectedRoute>
+              } />
+              <Route path="/reports" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Reports />
+                </ProtectedRoute>
+              } />
             </Route>
             
             <Route path="*" element={<NotFound />} />
