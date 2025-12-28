@@ -23,6 +23,9 @@ import Permissions from "./pages/Permissions";
 import Settings from "./pages/Settings";
 import Assignments from "./pages/Assignments";
 import ClientPortal from "./pages/ClientPortal";
+import ClientLogin from "./pages/ClientLogin";
+import ClientSignup from "./pages/ClientSignup";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +43,10 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             
+            {/* Client Portal Auth */}
+            <Route path="/client-login" element={<ClientLogin />} />
+            <Route path="/client-signup" element={<ClientSignup />} />
+            
             {/* Protected Routes */}
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
@@ -55,6 +62,7 @@ const App = () => (
               <Route path="/permissions" element={<Permissions />} />
               <Route path="/assignments" element={<Assignments />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/notifications" element={<Notifications />} />
               <Route path="/portal" element={<ClientPortal />} />
             </Route>
             
