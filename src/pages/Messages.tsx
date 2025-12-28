@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, ArrowLeft, User, Plus } from 'lucide-react';
+import { MessageSquare, Send, ArrowLeft, User, Plus, Check, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import { createNotification } from '@/hooks/useCreateNotification';
 
 interface ConversationWithClient {
   id: string;
@@ -40,22 +41,55 @@ interface Message {
   id: string;
   conversation_id: string;
   sender_id: string;
+  receiver_id: string | null;
   content: string;
   is_read: boolean;
   created_at: string;
 }
 
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export default function Messages() {
-  const { user } = useAuth();
+  const { user, profile, userRole, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const { data: clients = [] } = useClients();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isNewConvOpen, setIsNewConvOpen] = useState(false);
   const [newConvClientId, setNewConvClientId] = useState('');
+  const [newConvTeamMemberId, setNewConvTeamMemberId] = useState('');
   const [newConvSubject, setNewConvSubject] = useState('');
   const [newConvMessage, setNewConvMessage] = useState('');
+  const [chatType, setChatType] = useState<'client' | 'team'>('client');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch team members (admins and team_members)
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['all-team-members'],
+    queryFn: async () => {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('role', ['admin', 'team_member']);
+
+      if (!roles || roles.length === 0) return [];
+
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds)
+        .eq('status', 'active')
+        .neq('id', user?.id);
+
+      return (profiles || []) as TeamMember[];
+    },
+    enabled: !!user,
+  });
 
   // Fetch all conversations with client info
   const { data: conversations = [], isLoading: loadingConversations } = useQuery({
@@ -89,6 +123,12 @@ export default function Messages() {
     enabled: !!user && !!selectedConversation,
   });
 
+  // Count unread messages
+  const unreadCount = conversations.reduce((acc, conv) => {
+    // We'd need to fetch this but for now just count from messages
+    return acc;
+  }, 0);
+
   // Realtime subscription for messages
   useEffect(() => {
     if (!selectedConversation) return;
@@ -98,7 +138,7 @@ export default function Messages() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'messages',
           filter: `conversation_id=eq.${selectedConversation}`,
@@ -113,6 +153,28 @@ export default function Messages() {
       supabase.removeChannel(channel);
     };
   }, [selectedConversation, queryClient]);
+
+  // Realtime subscription for new conversations
+  useEffect(() => {
+    const channel = supabase
+      .channel('staff-conversations-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['staff-conversations'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -130,6 +192,7 @@ export default function Messages() {
           conversation_id: conversationId,
           sender_id: user?.id,
           client_id: conversation?.client_id,
+          receiver_id: conversation?.team_member_id !== user?.id ? conversation?.team_member_id : null,
           content,
         })
         .select()
@@ -145,6 +208,27 @@ export default function Messages() {
           team_member_id: user?.id,
         })
         .eq('id', conversationId);
+
+      // Create notification for client
+      if (conversation?.client_id) {
+        // Get client's user_id from client_access
+        const { data: access } = await supabase
+          .from('client_access')
+          .select('user_id')
+          .eq('client_id', conversation.client_id)
+          .maybeSingle();
+
+        if (access?.user_id) {
+          await createNotification({
+            userId: access.user_id,
+            title: 'New Message',
+            message: `${profile?.name || 'Team Member'}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+            type: 'info',
+            entityType: 'conversation',
+            entityId: conversationId,
+          });
+        }
+      }
 
       return data;
     },
@@ -168,6 +252,9 @@ export default function Messages() {
         .neq('sender_id', user?.id);
 
       if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff-messages', selectedConversation] });
     },
   });
 
@@ -194,12 +281,21 @@ export default function Messages() {
 
   // Create new conversation mutation
   const createConversation = useMutation({
-    mutationFn: async ({ clientId, subject, firstMessage }: { clientId: string; subject: string; firstMessage: string }) => {
+    mutationFn: async ({ clientId, teamMemberId, subject, firstMessage }: { 
+      clientId?: string; 
+      teamMemberId?: string;
+      subject: string; 
+      firstMessage: string 
+    }) => {
+      // For team-to-team chat, we use a special client_id placeholder or create a different structure
+      // For now, we'll require a client for conversations
+      const actualClientId = clientId || teamMemberId;
+      
       // Create conversation
       const { data: conv, error: convError } = await supabase
         .from('conversations')
         .insert({
-          client_id: clientId,
+          client_id: actualClientId,
           team_member_id: user?.id,
           subject,
         })
@@ -214,11 +310,43 @@ export default function Messages() {
         .insert({
           conversation_id: conv.id,
           sender_id: user?.id,
-          client_id: clientId,
+          client_id: clientId || null,
+          receiver_id: teamMemberId || null,
           content: firstMessage,
         });
 
       if (msgError) throw msgError;
+
+      // Notify the recipient
+      if (clientId) {
+        const { data: access } = await supabase
+          .from('client_access')
+          .select('user_id')
+          .eq('client_id', clientId)
+          .maybeSingle();
+
+        if (access?.user_id) {
+          await createNotification({
+            userId: access.user_id,
+            title: 'New Message from Legal Team',
+            message: `${profile?.name || 'Team Member'} started a conversation: ${subject}`,
+            type: 'info',
+            entityType: 'conversation',
+            entityId: conv.id,
+          });
+        }
+      }
+
+      if (teamMemberId) {
+        await createNotification({
+          userId: teamMemberId,
+          title: 'New Message',
+          message: `${profile?.name || 'Team Member'} started a conversation: ${subject}`,
+          type: 'info',
+          entityType: 'conversation',
+          entityId: conv.id,
+        });
+      }
 
       return conv;
     },
@@ -226,6 +354,7 @@ export default function Messages() {
       queryClient.invalidateQueries({ queryKey: ['staff-conversations'] });
       setIsNewConvOpen(false);
       setNewConvClientId('');
+      setNewConvTeamMemberId('');
       setNewConvSubject('');
       setNewConvMessage('');
       setSelectedConversation(conv.id);
@@ -237,15 +366,28 @@ export default function Messages() {
   });
 
   const handleCreateConversation = () => {
-    if (!newConvClientId || !newConvSubject.trim() || !newConvMessage.trim()) return;
-    createConversation.mutate({
-      clientId: newConvClientId,
-      subject: newConvSubject.trim(),
-      firstMessage: newConvMessage.trim(),
-    });
+    if (chatType === 'client') {
+      if (!newConvClientId || !newConvSubject.trim() || !newConvMessage.trim()) return;
+      createConversation.mutate({
+        clientId: newConvClientId,
+        subject: newConvSubject.trim(),
+        firstMessage: newConvMessage.trim(),
+      });
+    } else {
+      if (!newConvTeamMemberId || !newConvSubject.trim() || !newConvMessage.trim()) return;
+      createConversation.mutate({
+        teamMemberId: newConvTeamMemberId,
+        subject: newConvSubject.trim(),
+        firstMessage: newConvMessage.trim(),
+      });
+    }
   };
 
   const clientOptions = clients.map(c => ({ value: c.id, label: c.name }));
+  const teamMemberOptions = teamMembers.map(tm => ({ value: tm.id, label: tm.name }));
+
+  // Total unread messages count
+  const totalUnread = messages.filter(m => !m.is_read && m.sender_id !== user?.id).length;
 
   if (loadingConversations) {
     return (
@@ -264,11 +406,16 @@ export default function Messages() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Client Messages
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent flex items-center gap-2">
+            Messages
+            {totalUnread > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                {totalUnread} unread
+              </Badge>
+            )}
           </h1>
           <p className="text-muted-foreground">
-            Respond to client inquiries and conversations
+            {conversations.length} conversations
           </p>
         </div>
         <Button onClick={() => setIsNewConvOpen(true)}>
@@ -394,12 +541,24 @@ export default function Messages() {
                               )}
                             >
                               <p className="text-sm">{msg.content}</p>
-                              <p className={cn(
-                                "text-xs mt-1",
-                                isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                              <div className={cn(
+                                "flex items-center gap-1 mt-1",
+                                isOwn ? "justify-end" : "justify-start"
                               )}>
-                                {format(new Date(msg.created_at), 'h:mm a')}
-                              </p>
+                                <p className={cn(
+                                  "text-xs",
+                                  isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                                )}>
+                                  {format(new Date(msg.created_at), 'h:mm a')}
+                                </p>
+                                {isOwn && (
+                                  msg.is_read ? (
+                                    <CheckCheck className="h-3 w-3 text-primary-foreground/70" />
+                                  ) : (
+                                    <Check className="h-3 w-3 text-primary-foreground/70" />
+                                  )
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
@@ -437,20 +596,56 @@ export default function Messages() {
           <DialogHeader>
             <DialogTitle>Start New Conversation</DialogTitle>
             <DialogDescription>
-              Select a client and start a conversation with them.
+              Start a conversation with a client or team member.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Client</Label>
-              <SearchableCombobox
-                options={clientOptions}
-                value={newConvClientId}
-                onChange={setNewConvClientId}
-                placeholder="Select a client..."
-                searchPlaceholder="Search clients..."
-              />
+            {/* Chat type selector */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={chatType === 'client' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setChatType('client')}
+              >
+                Chat with Client
+              </Button>
+              {isAdmin && (
+                <Button
+                  type="button"
+                  variant={chatType === 'team' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setChatType('team')}
+                >
+                  Chat with Team
+                </Button>
+              )}
             </div>
+
+            {chatType === 'client' ? (
+              <div className="space-y-2">
+                <Label>Client</Label>
+                <SearchableCombobox
+                  options={clientOptions}
+                  value={newConvClientId}
+                  onChange={setNewConvClientId}
+                  placeholder="Select a client..."
+                  searchPlaceholder="Search clients..."
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Team Member</Label>
+                <SearchableCombobox
+                  options={teamMemberOptions}
+                  value={newConvTeamMemberId}
+                  onChange={setNewConvTeamMemberId}
+                  placeholder="Select a team member..."
+                  searchPlaceholder="Search team members..."
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="subject">Subject</Label>
               <Input
@@ -476,7 +671,13 @@ export default function Messages() {
             </Button>
             <Button 
               onClick={handleCreateConversation}
-              disabled={!newConvClientId || !newConvSubject.trim() || !newConvMessage.trim() || createConversation.isPending}
+              disabled={
+                (chatType === 'client' && !newConvClientId) ||
+                (chatType === 'team' && !newConvTeamMemberId) ||
+                !newConvSubject.trim() || 
+                !newConvMessage.trim() || 
+                createConversation.isPending
+              }
             >
               {createConversation.isPending ? 'Starting...' : 'Start Conversation'}
             </Button>

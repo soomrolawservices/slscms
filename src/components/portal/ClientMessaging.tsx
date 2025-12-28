@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, Plus, ArrowLeft } from 'lucide-react';
+import { MessageSquare, Send, Plus, ArrowLeft, Check, CheckCheck, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -13,27 +14,88 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useConversations, useMessages, useCreateConversation, useSendMessage, useMarkMessagesRead } from '@/hooks/useMessages';
 import { useClientPortalData } from '@/hooks/useClientPortal';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { createNotification } from '@/hooks/useCreateNotification';
+
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+}
 
 export function ClientMessaging() {
   const { user, profile } = useAuth();
   const { client } = useClientPortalData();
+  const queryClient = useQueryClient();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [newSubject, setNewSubject] = useState('');
+  const [selectedTeamMember, setSelectedTeamMember] = useState('');
+  const [firstMessage, setFirstMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch team members (admins and team_members)
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['client-team-members'],
+    queryFn: async () => {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('role', ['admin', 'team_member']);
+
+      if (!roles || roles.length === 0) return [];
+
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds)
+        .eq('status', 'active');
+
+      return (profiles || []) as TeamMember[];
+    },
+    enabled: !!user,
+  });
 
   const { data: conversations = [], isLoading: loadingConversations } = useConversations(client?.id);
   const { data: messages = [], isLoading: loadingMessages } = useMessages(selectedConversation || '');
   const createConversation = useCreateConversation();
   const sendMessage = useSendMessage();
   const markRead = useMarkMessagesRead();
+
+  // Real-time subscription for messages
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    const channel = supabase
+      .channel(`client-messages-${selectedConversation}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedConversation}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['messages', selectedConversation] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedConversation, queryClient]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -48,26 +110,81 @@ export function ClientMessaging() {
   }, [selectedConversation]);
 
   const handleCreateConversation = async () => {
-    if (!client?.id || !newSubject.trim()) return;
+    if (!client?.id || !newSubject.trim() || !firstMessage.trim()) return;
     
-    const conversation = await createConversation.mutateAsync({
-      clientId: client.id,
-      subject: newSubject.trim(),
-    });
-    
-    setNewSubject('');
-    setIsNewOpen(false);
-    setSelectedConversation(conversation.id);
+    try {
+      // Create conversation with team member
+      const { data: conv, error: convError } = await supabase
+        .from('conversations')
+        .insert({
+          client_id: client.id,
+          team_member_id: selectedTeamMember || null,
+          subject: newSubject.trim(),
+        })
+        .select()
+        .single();
+
+      if (convError) throw convError;
+
+      // Send first message
+      const { error: msgError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conv.id,
+          sender_id: user?.id,
+          client_id: client.id,
+          receiver_id: selectedTeamMember || null,
+          content: firstMessage.trim(),
+        });
+
+      if (msgError) throw msgError;
+
+      // Create notification for the team member
+      if (selectedTeamMember) {
+        await createNotification({
+          userId: selectedTeamMember,
+          title: 'New Message from Client',
+          message: `${profile?.name || 'A client'} started a conversation: ${newSubject.trim()}`,
+          type: 'info',
+          entityType: 'conversation',
+          entityId: conv.id,
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      setNewSubject('');
+      setFirstMessage('');
+      setSelectedTeamMember('');
+      setIsNewOpen(false);
+      setSelectedConversation(conv.id);
+    } catch (error: any) {
+      console.error('Error creating conversation:', error);
+    }
   };
 
   const handleSendMessage = async () => {
     if (!selectedConversation || !newMessage.trim() || !client?.id) return;
     
+    const conversation = conversations.find(c => c.id === selectedConversation);
+    
     await sendMessage.mutateAsync({
       conversationId: selectedConversation,
       content: newMessage.trim(),
       clientId: client.id,
+      receiverId: conversation?.team_member_id || undefined,
     });
+
+    // Notify team member
+    if (conversation?.team_member_id) {
+      await createNotification({
+        userId: conversation.team_member_id,
+        title: 'New Message',
+        message: `${profile?.name || 'Client'}: ${newMessage.trim().substring(0, 50)}${newMessage.length > 50 ? '...' : ''}`,
+        type: 'info',
+        entityType: 'conversation',
+        entityId: selectedConversation,
+      });
+    }
     
     setNewMessage('');
   };
@@ -77,6 +194,16 @@ export function ClientMessaging() {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const teamMemberOptions = teamMembers.map((tm) => ({
+    value: tm.id,
+    label: tm.name,
+  }));
+
+  // Count unread messages per conversation
+  const getUnreadCount = (conversationId: string) => {
+    return messages.filter(m => m.conversation_id === conversationId && !m.is_read && m.sender_id !== user?.id).length;
   };
 
   if (loadingConversations) {
@@ -129,14 +256,9 @@ export function ClientMessaging() {
                   >
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium">{conv.subject}</h4>
-                      <span className={cn(
-                        "px-2 py-1 text-xs rounded-full",
-                        conv.status === 'open' 
-                          ? "bg-green-100 text-green-700" 
-                          : "bg-muted text-muted-foreground"
-                      )}>
+                      <Badge variant={conv.status === 'open' ? 'default' : 'secondary'}>
                         {conv.status}
-                      </span>
+                      </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
                       {format(new Date(conv.updated_at), 'MMM d, yyyy h:mm a')}
@@ -154,10 +276,23 @@ export function ClientMessaging() {
             <DialogHeader>
               <DialogTitle>Start New Conversation</DialogTitle>
               <DialogDescription>
-                Send a message to Soomro Law Services
+                Send a message to a team member
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Team Member (Optional)</Label>
+                <SearchableCombobox
+                  options={teamMemberOptions}
+                  value={selectedTeamMember}
+                  onChange={setSelectedTeamMember}
+                  placeholder="Select a team member..."
+                  searchPlaceholder="Search team members..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to send to all team members
+                </p>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="subject">Subject</Label>
                 <Input
@@ -167,6 +302,15 @@ export function ClientMessaging() {
                   placeholder="e.g., Question about my case"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="first-message">Message</Label>
+                <Input
+                  id="first-message"
+                  value={firstMessage}
+                  onChange={(e) => setFirstMessage(e.target.value)}
+                  placeholder="Type your message..."
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsNewOpen(false)}>
@@ -174,9 +318,9 @@ export function ClientMessaging() {
               </Button>
               <Button 
                 onClick={handleCreateConversation}
-                disabled={!newSubject.trim() || createConversation.isPending}
+                disabled={!newSubject.trim() || !firstMessage.trim()}
               >
-                {createConversation.isPending ? 'Creating...' : 'Start Conversation'}
+                Start Conversation
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -240,12 +384,24 @@ export function ClientMessaging() {
                       )}
                     >
                       <p className="text-sm">{msg.content}</p>
-                      <p className={cn(
-                        "text-xs mt-1",
-                        isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                      <div className={cn(
+                        "flex items-center gap-1 mt-1",
+                        isOwn ? "justify-end" : "justify-start"
                       )}>
-                        {format(new Date(msg.created_at), 'h:mm a')}
-                      </p>
+                        <p className={cn(
+                          "text-xs",
+                          isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                        )}>
+                          {format(new Date(msg.created_at), 'h:mm a')}
+                        </p>
+                        {isOwn && (
+                          msg.is_read ? (
+                            <CheckCheck className={cn("h-3 w-3", "text-primary-foreground/70")} />
+                          ) : (
+                            <Check className={cn("h-3 w-3", "text-primary-foreground/70")} />
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
