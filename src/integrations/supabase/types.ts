@@ -159,6 +159,35 @@ export type Database = {
           },
         ]
       }
+      client_access: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_access_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           assigned_to: string | null
@@ -682,7 +711,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "team_member"
+      app_role: "admin" | "team_member" | "client"
       user_status: "pending" | "active" | "blocked"
     }
     CompositeTypes: {
@@ -811,7 +840,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "team_member"],
+      app_role: ["admin", "team_member", "client"],
       user_status: ["pending", "active", "blocked"],
     },
   },

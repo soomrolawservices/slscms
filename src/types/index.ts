@@ -1,6 +1,6 @@
 // Core types for the Legal Case Management System
 
-export type UserRole = 'admin' | 'team_member';
+export type UserRole = 'admin' | 'team_member' | 'client';
 
 export type UserStatus = 'pending' | 'active' | 'blocked';
 
