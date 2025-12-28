@@ -6,6 +6,50 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Helper function to verify JWT and get user
+async function verifyAuth(req: Request, supabase: any) {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    throw new Error('No authorization header');
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  
+  if (error || !user) {
+    throw new Error('Unauthorized: Invalid token');
+  }
+
+  return user;
+}
+
+// Helper function to check if user is admin
+async function checkAdminRole(supabase: any, userId: string) {
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('role', 'admin')
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error('Forbidden: Admin access required');
+  }
+
+  // Also check if user is active
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', userId)
+    .single();
+
+  if (profileError || profile?.status !== 'active') {
+    throw new Error('Forbidden: Account is not active');
+  }
+
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,6 +64,14 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify authentication
+    const user = await verifyAuth(req, supabase);
+    console.log(`AI Analytics requested by user: ${user.id}`);
+
+    // Verify admin role
+    await checkAdminRole(supabase, user.id);
+    console.log(`Admin access verified for user: ${user.id}`);
 
     // Fetch all data for analysis
     const [clientsRes, casesRes, paymentsRes, appointmentsRes, invoicesRes] = await Promise.all([
@@ -154,9 +206,12 @@ Format your response in sections: Insights, Predictions, Recommendations, Alerts
     );
   } catch (error) {
     console.error("Analytics error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const status = message.includes('Unauthorized') ? 401 : 
+                   message.includes('Forbidden') ? 403 : 500;
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: message }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
