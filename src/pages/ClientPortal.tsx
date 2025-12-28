@@ -1,5 +1,6 @@
-import { Briefcase, FileText, CreditCard, Receipt, User, Clock, AlertCircle } from 'lucide-react';
+import { Briefcase, FileText, CreditCard, Receipt, User, Clock, AlertCircle, Calendar, LogOut } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,10 +8,18 @@ import { useClientPortalData } from '@/hooks/useClientPortal';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ClientAppointmentBooking } from '@/components/portal/ClientAppointmentBooking';
+import { useNavigate } from 'react-router-dom';
 
 export default function ClientPortal() {
-  const { profile, userRole } = useAuth();
+  const { profile, userRole, logout } = useAuth();
   const { client, cases, documents, payments, invoices, isLoading, hasAccess } = useClientPortalData();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/client-login');
+  };
 
   if (isLoading) {
     return (
@@ -38,6 +47,10 @@ export default function ClientPortal() {
         <p className="text-muted-foreground max-w-md">
           Your account is pending approval. You will be notified once your access has been approved by an administrator.
         </p>
+        <Button variant="outline" onClick={handleLogout} className="mt-6">
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
       </div>
     );
   }
@@ -50,6 +63,10 @@ export default function ClientPortal() {
         <p className="text-muted-foreground max-w-md">
           Your account has been blocked. Please contact support for assistance.
         </p>
+        <Button variant="outline" onClick={handleLogout} className="mt-6">
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
       </div>
     );
   }
@@ -62,6 +79,10 @@ export default function ClientPortal() {
         <p className="text-muted-foreground max-w-md">
           Your account is not linked to any client record. Please contact your case manager for assistance.
         </p>
+        <Button variant="outline" onClick={handleLogout} className="mt-6">
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
       </div>
     );
   }
@@ -168,10 +189,22 @@ export default function ClientPortal() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p className="text-sm text-muted-foreground font-medium">Soomro Law Services - Client Portal</p>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#006A4E] to-[#00857C] flex items-center justify-center shadow">
+              <span className="text-sm font-bold text-white">SL</span>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">Soomro Law Services</p>
+              <p className="text-xs text-muted-foreground italic">Just Relax! You are in Safe Hands.</p>
+            </div>
+          </div>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Welcome, {profile?.name || client?.name}</h1>
           <p className="text-muted-foreground">View your cases, documents, and financial information</p>
         </div>
+        <Button variant="outline" onClick={handleLogout}>
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -224,11 +257,15 @@ export default function ClientPortal() {
 
       {/* Tabs */}
       <Tabs defaultValue="cases" className="w-full">
-        <TabsList className="border-2 border-border">
+        <TabsList className="border-2 border-border flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="cases">Cases ({cases.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
           <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
           <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
+          <TabsTrigger value="appointments" className="flex items-center gap-1">
+            <Calendar className="h-4 w-4" />
+            Appointments
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="cases" className="mt-4">
@@ -269,6 +306,10 @@ export default function ClientPortal() {
             searchKey="invoice_id"
             title="Your Invoices"
           />
+        </TabsContent>
+
+        <TabsContent value="appointments" className="mt-4">
+          <ClientAppointmentBooking />
         </TabsContent>
       </Tabs>
     </div>
