@@ -20,6 +20,7 @@ import Credentials from "./pages/Credentials";
 import Users from "./pages/Users";
 import Permissions from "./pages/Permissions";
 import Settings from "./pages/Settings";
+import Assignments from "./pages/Assignments";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/credentials" element={<Credentials />} />
               <Route path="/users" element={<Users />} />
               <Route path="/permissions" element={<Permissions />} />
+              <Route path="/assignments" element={<Assignments />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             

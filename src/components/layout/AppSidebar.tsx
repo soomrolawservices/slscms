@@ -12,7 +12,8 @@ import {
   Shield,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UserPlus
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ const adminNavItems = [
   { title: 'Invoices', url: '/invoices', icon: Receipt },
   { title: 'Appointments', url: '/appointments', icon: Calendar },
   { title: 'Credentials', url: '/credentials', icon: Key },
+  { title: 'Assignments', url: '/assignments', icon: UserPlus },
   { title: 'Users', url: '/users', icon: UserCog },
   { title: 'Permissions', url: '/permissions', icon: Shield },
   { title: 'Settings', url: '/settings', icon: Settings },
