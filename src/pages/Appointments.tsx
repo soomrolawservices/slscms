@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useAppointments, useCreateAppointment, useUpdateAppointment, useDeleteAppointment, type AppointmentData } from '@/hooks/useAppointments';
 import { useClients } from '@/hooks/useClients';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { ReminderDialog } from '@/components/appointments/ReminderDialog';
 import { toast } from '@/hooks/use-toast';
@@ -39,6 +40,7 @@ export default function Appointments() {
   const { user } = useAuth();
   const { data: appointments = [], isLoading } = useAppointments();
   const { data: clients = [] } = useClients();
+  const { data: teamMembers = [] } = useTeamMembers();
   const createAppointment = useCreateAppointment();
   const updateAppointment = useUpdateAppointment();
   const deleteAppointment = useDeleteAppointment();
@@ -49,7 +51,9 @@ export default function Appointments() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
+  const [isApproveOpen, setIsApproveOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentData | null>(null);
+  const [assignToId, setAssignToId] = useState<string>('');
 
   const [formData, setFormData] = useState({
     date: '',
@@ -248,14 +252,27 @@ export default function Appointments() {
     setSelectedAppointment(null);
   };
 
-  const handleApprove = async (apt: AppointmentData) => {
-    await updateAppointment.mutateAsync({
-      id: apt.id,
-      status: 'scheduled',
-      assigned_to: user?.id,
-    });
-    toast({ title: 'Appointment approved and assigned to you' });
+  const handleApproveClick = (apt: AppointmentData) => {
+    setSelectedAppointment(apt);
+    setAssignToId(user?.id || '');
+    setIsApproveOpen(true);
   };
+
+  const handleApproveConfirm = async () => {
+    if (!selectedAppointment || !assignToId) return;
+    await updateAppointment.mutateAsync({
+      id: selectedAppointment.id,
+      status: 'scheduled',
+      assigned_to: assignToId,
+    });
+    const assignedMember = teamMembers.find(m => m.id === assignToId);
+    toast({ title: `Appointment approved and assigned to ${assignedMember?.name || 'team member'}` });
+    setIsApproveOpen(false);
+    setSelectedAppointment(null);
+    setAssignToId('');
+  };
+
+  const teamMemberOptions = teamMembers.map(m => ({ value: m.id, label: m.name }));
 
   return (
     <div className="space-y-6">
@@ -308,15 +325,13 @@ export default function Appointments() {
                     View
                   </DropdownMenuItem>
                   {row.status === 'pending' && (
-                    <>
-                      <DropdownMenuItem 
-                        onClick={() => handleApprove(row)}
-                        className="text-green-600"
-                      >
-                        <Check className="h-4 w-4 mr-2" />
-                        Approve & Assign to Me
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem 
+                      onClick={() => handleApproveClick(row)}
+                      className="text-green-600"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Approve & Assign
+                    </DropdownMenuItem>
                   )}
                   <DropdownMenuItem 
                     onClick={() => handleSetReminder(row)}
@@ -622,6 +637,39 @@ export default function Appointments() {
           currentReminderMinutes={selectedAppointment.reminder_minutes}
         />
       )}
+
+      {/* Approve & Assign Dialog */}
+      <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
+        <DialogContent className="border-2 border-border">
+          <DialogHeader>
+            <DialogTitle>Approve & Assign Appointment</DialogTitle>
+            <DialogDescription>
+              Select a team member to assign this appointment to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label>Assign To</Label>
+            <SearchableCombobox
+              options={teamMemberOptions}
+              value={assignToId}
+              onChange={setAssignToId}
+              placeholder="Select team member..."
+              searchPlaceholder="Search team members..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApproveOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApproveConfirm} 
+              disabled={!assignToId || updateAppointment.isPending}
+            >
+              {updateAppointment.isPending ? 'Approving...' : 'Approve & Assign'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

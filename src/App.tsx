@@ -28,6 +28,7 @@ import ClientLogin from "./pages/ClientLogin";
 import ClientSignup from "./pages/ClientSignup";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
+import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/messages" element={<Messages />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
