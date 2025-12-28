@@ -11,7 +11,11 @@ import {
   UserCog,
   Shield,
   Settings,
-  LogOut
+  LogOut,
+  Wallet,
+  UserPlus,
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -28,17 +32,33 @@ const mobileNavItems = [
   { title: 'More', url: '#more', icon: MoreHorizontal },
 ];
 
-const allNavItems = [
+const adminNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Clients', url: '/clients', icon: Users },
   { title: 'Cases', url: '/cases', icon: Briefcase },
   { title: 'Documents', url: '/documents', icon: FileText },
   { title: 'Payments', url: '/payments', icon: CreditCard },
   { title: 'Invoices', url: '/invoices', icon: Receipt },
+  { title: 'Expenses', url: '/expenses', icon: Wallet },
   { title: 'Appointments', url: '/appointments', icon: Calendar },
+  { title: 'Messages', url: '/messages', icon: MessageSquare },
   { title: 'Credentials', url: '/credentials', icon: Key },
+  { title: 'Assignments', url: '/assignments', icon: UserPlus },
+  { title: 'Reports', url: '/reports', icon: BarChart3 },
   { title: 'Users', url: '/users', icon: UserCog },
   { title: 'Permissions', url: '/permissions', icon: Shield },
+  { title: 'Settings', url: '/settings', icon: Settings },
+];
+
+const teamNavItems = [
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Clients', url: '/clients', icon: Users },
+  { title: 'Cases', url: '/cases', icon: Briefcase },
+  { title: 'Documents', url: '/documents', icon: FileText },
+  { title: 'Payments', url: '/payments', icon: CreditCard },
+  { title: 'Expenses', url: '/expenses', icon: Wallet },
+  { title: 'Appointments', url: '/appointments', icon: Calendar },
+  { title: 'Messages', url: '/messages', icon: MessageSquare },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
@@ -47,14 +67,8 @@ export function MobileNav() {
   const { user, profile, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  const filteredNavItems = allNavItems.filter(item => {
-    if (!isAdmin && (item.url === '/users' || item.url === '/permissions')) {
-      return false;
-    }
-    return true;
-  });
-
-  const moreItems = filteredNavItems.filter(nav => !mobileNavItems.some(m => m.url === nav.url));
+  const allNavItems = isAdmin ? adminNavItems : teamNavItems;
+  const moreItems = allNavItems.filter(nav => !mobileNavItems.some(m => m.url === nav.url));
 
   return (
     <>
