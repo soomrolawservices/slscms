@@ -25,6 +25,7 @@ import Permissions from "./pages/Permissions";
 import Settings from "./pages/Settings";
 import Assignments from "./pages/Assignments";
 import ClientPortal from "./pages/ClientPortal";
+import ClientProfile from "./pages/ClientProfile";
 import ClientLogin from "./pages/ClientLogin";
 import ClientSignup from "./pages/ClientSignup";
 import Notifications from "./pages/Notifications";
@@ -54,6 +55,7 @@ const App = () => (
             {/* Client Portal - Separate Layout */}
             <Route element={<ClientPortalLayout />}>
               <Route path="/portal" element={<ClientPortal />} />
+              <Route path="/portal/profile" element={<ClientProfile />} />
             </Route>
             
             {/* Protected Routes - Admin/Team Only */}
