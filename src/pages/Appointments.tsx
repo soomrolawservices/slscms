@@ -20,44 +20,90 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { mockAppointments, mockClients } from '@/data/mockData';
-import type { Appointment } from '@/types';
+import { SearchableCombobox } from '@/components/ui/searchable-combobox';
+import { useAppointments, useCreateAppointment, useUpdateAppointment, useDeleteAppointment, type AppointmentData } from '@/hooks/useAppointments';
+import { useClients } from '@/hooks/useClients';
+import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
-const typeIcons = {
-  in_office: Building,
+const typeIcons: Record<string, React.ElementType> = {
+  'in-office': Building,
   outdoor: MapPin,
   virtual: Video,
 };
 
 export default function Appointments() {
-  const [appointments, setAppointments] = useState(mockAppointments);
+  const { data: appointments = [], isLoading } = useAppointments();
+  const { data: clients = [] } = useClients();
+  const createAppointment = useCreateAppointment();
+  const updateAppointment = useUpdateAppointment();
+  const deleteAppointment = useDeleteAppointment();
+
   const [activeTab, setActiveTab] = useState('scheduled');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentData | null>(null);
+
+  const [formData, setFormData] = useState({
+    date: '',
+    time: '',
+    topic: '',
+    duration: 60,
+    type: 'in-office',
+    client_id: '',
+    client_name: '',
+    client_phone: '',
+    client_email: '',
+    platform: '',
+    status: 'scheduled',
+  });
+
+  const resetForm = () => {
+    setFormData({
+      date: '',
+      time: '',
+      topic: '',
+      duration: 60,
+      type: 'in-office',
+      client_id: '',
+      client_name: '',
+      client_phone: '',
+      client_email: '',
+      platform: '',
+      status: 'scheduled',
+    });
+  };
 
   const filteredAppointments = appointments.filter((apt) =>
     activeTab === 'all' ? true : apt.status === activeTab
   );
 
-  const columns: Column<Appointment>[] = [
+  const clientOptions = clients.map((c) => ({ value: c.id, label: c.name }));
+
+  const handleClientChange = (clientId: string) => {
+    const client = clients.find((c) => c.id === clientId);
+    if (client) {
+      setFormData({
+        ...formData,
+        client_id: clientId,
+        client_name: client.name,
+        client_phone: client.phone || '',
+        client_email: client.email || '',
+      });
+    }
+  };
+
+  const columns: Column<AppointmentData>[] = [
     {
       key: 'date',
       header: 'Date & Time',
       sortable: true,
       render: (row) => (
         <div>
-          <p className="font-medium">{format(row.date, 'MMM d, yyyy')}</p>
+          <p className="font-medium">{format(new Date(row.date), 'MMM d, yyyy')}</p>
           <p className="text-sm text-muted-foreground">{row.time}</p>
         </div>
       ),
@@ -68,18 +114,19 @@ export default function Appointments() {
       render: (row) => <span className="font-medium">{row.topic}</span>,
     },
     {
-      key: 'clientName',
+      key: 'client_name',
       header: 'Client',
+      render: (row) => row.client_name || '-',
     },
     {
       key: 'type',
       header: 'Type',
       render: (row) => {
-        const Icon = typeIcons[row.type];
+        const Icon = typeIcons[row.type] || Building;
         return (
           <div className="flex items-center gap-2">
             <Icon className="h-4 w-4" />
-            <span className="capitalize">{row.type.replace('_', ' ')}</span>
+            <span className="capitalize">{row.type.replace('-', ' ')}</span>
           </div>
         );
       },
@@ -87,7 +134,7 @@ export default function Appointments() {
     {
       key: 'duration',
       header: 'Duration',
-      render: (row) => <span>{row.duration} min</span>,
+      render: (row) => <span>{row.duration || 60} min</span>,
     },
     {
       key: 'status',
@@ -96,52 +143,86 @@ export default function Appointments() {
     },
   ];
 
-  const handleView = (apt: Appointment) => {
+  const handleView = (apt: AppointmentData) => {
     setSelectedAppointment(apt);
     setIsViewOpen(true);
   };
 
-  const handleDelete = (apt: Appointment) => {
-    setAppointments(appointments.filter((a) => a.id !== apt.id));
-    toast({
-      title: 'Appointment deleted',
-      description: 'The appointment has been removed.',
+  const handleEdit = (apt: AppointmentData) => {
+    setSelectedAppointment(apt);
+    setFormData({
+      date: apt.date.split('T')[0],
+      time: apt.time,
+      topic: apt.topic,
+      duration: apt.duration || 60,
+      type: apt.type,
+      client_id: apt.client_id || '',
+      client_name: apt.client_name || '',
+      client_phone: apt.client_phone || '',
+      client_email: apt.client_email || '',
+      platform: apt.platform || '',
+      status: apt.status,
     });
+    setIsEditOpen(true);
   };
 
-  const handleSetReminder = (apt: Appointment) => {
+  const handleDeleteClick = (apt: AppointmentData) => {
+    setSelectedAppointment(apt);
+    setIsDeleteOpen(true);
+  };
+
+  const handleSetReminder = (apt: AppointmentData) => {
     toast({
       title: 'Reminder set',
-      description: `You'll be notified before the appointment with ${apt.clientName}.`,
+      description: `You'll be notified before the appointment with ${apt.client_name}.`,
     });
   };
 
-  const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const client = mockClients.find(c => c.id === formData.get('clientId'));
-    
-    const newAppointment: Appointment = {
-      id: String(Date.now()),
-      date: new Date(formData.get('date') as string),
-      time: formData.get('time') as string,
-      topic: formData.get('topic') as string,
-      duration: parseInt(formData.get('duration') as string) || 60,
-      type: formData.get('type') as Appointment['type'],
-      clientId: client?.id || '',
-      clientName: client?.name || '',
-      clientPhone: client?.phone || '',
-      clientEmail: client?.email || '',
-      platform: formData.get('platform') as string || undefined,
+    await createAppointment.mutateAsync({
+      date: formData.date,
+      time: formData.time,
+      topic: formData.topic,
+      duration: formData.duration,
+      type: formData.type,
+      client_id: formData.client_id || null,
+      client_name: formData.client_name || null,
+      client_phone: formData.client_phone || null,
+      client_email: formData.client_email || null,
+      platform: formData.platform || null,
       status: 'scheduled',
-    };
-    
-    setAppointments([newAppointment, ...appointments]);
-    setIsCreateOpen(false);
-    toast({
-      title: 'Appointment scheduled',
-      description: `Meeting with ${newAppointment.clientName} has been scheduled.`,
     });
+    setIsCreateOpen(false);
+    resetForm();
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAppointment) return;
+    await updateAppointment.mutateAsync({
+      id: selectedAppointment.id,
+      date: formData.date,
+      time: formData.time,
+      topic: formData.topic,
+      duration: formData.duration,
+      type: formData.type,
+      client_id: formData.client_id || null,
+      client_name: formData.client_name || null,
+      client_phone: formData.client_phone || null,
+      client_email: formData.client_email || null,
+      platform: formData.platform || null,
+      status: formData.status,
+    });
+    setIsEditOpen(false);
+    resetForm();
+  };
+
+  const handleDelete = async () => {
+    if (!selectedAppointment) return;
+    await deleteAppointment.mutateAsync(selectedAppointment.id);
+    setIsDeleteOpen(false);
+    setSelectedAppointment(null);
   };
 
   return (
@@ -156,7 +237,7 @@ export default function Appointments() {
             Manage your schedule and meetings
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="shadow-xs">
+        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
           <Plus className="h-4 w-4 mr-2" />
           Schedule Appointment
         </Button>
@@ -176,6 +257,8 @@ export default function Appointments() {
             columns={columns}
             searchPlaceholder="Search appointments..."
             searchKey="topic"
+            title="Appointments"
+            isLoading={isLoading}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -192,13 +275,13 @@ export default function Appointments() {
                     <Bell className="h-4 w-4 mr-2" />
                     Set Reminder
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleEdit(row)}>
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"
-                    onClick={() => handleDelete(row)}
+                    onClick={() => handleDeleteClick(row)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Cancel
@@ -223,62 +306,174 @@ export default function Appointments() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="topic">Topic</Label>
-                <Input id="topic" name="topic" required />
+                <Input 
+                  id="topic" 
+                  value={formData.topic}
+                  onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                  required 
+                />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="clientId">Client</Label>
-                <Select name="clientId" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select client" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-2 border-border">
-                    {mockClients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Client</Label>
+                <SearchableCombobox
+                  options={clientOptions}
+                  value={formData.client_id}
+                  onChange={handleClientChange}
+                  placeholder="Select client..."
+                  searchPlaceholder="Search clients..."
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="date">Date</Label>
-                  <Input id="date" name="date" type="date" required />
+                  <Input 
+                    id="date" 
+                    type="date" 
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    required 
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="time">Time</Label>
-                  <Input id="time" name="time" type="time" required />
+                  <Input 
+                    id="time" 
+                    type="time" 
+                    value={formData.time}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    required 
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="type">Type</Label>
-                  <Select name="type" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-2 border-border">
-                      <SelectItem value="in_office">In Office</SelectItem>
-                      <SelectItem value="outdoor">Outdoor</SelectItem>
-                      <SelectItem value="virtual">Virtual</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Type</Label>
+                  <SearchableCombobox
+                    options={[
+                      { value: 'in-office', label: 'In Office' },
+                      { value: 'outdoor', label: 'Outdoor' },
+                      { value: 'virtual', label: 'Virtual' },
+                    ]}
+                    value={formData.type}
+                    onChange={(value) => setFormData({ ...formData, type: value })}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="duration">Duration (min)</Label>
-                  <Input id="duration" name="duration" type="number" defaultValue={60} />
+                  <Input 
+                    id="duration" 
+                    type="number" 
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
+                  />
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="platform">Platform (if virtual)</Label>
-                <Input id="platform" name="platform" placeholder="e.g., Zoom, Google Meet" />
-              </div>
+              {formData.type === 'virtual' && (
+                <div className="grid gap-2">
+                  <Label htmlFor="platform">Platform</Label>
+                  <Input 
+                    id="platform" 
+                    placeholder="e.g., Zoom, Google Meet"
+                    value={formData.platform}
+                    onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Schedule</Button>
+              <Button type="submit" disabled={createAppointment.isPending}>
+                {createAppointment.isPending ? 'Scheduling...' : 'Schedule'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="border-2 border-border">
+          <DialogHeader>
+            <DialogTitle>Edit Appointment</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdate}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-topic">Topic</Label>
+                <Input 
+                  id="edit-topic" 
+                  value={formData.topic}
+                  onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                  required 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Client</Label>
+                <SearchableCombobox
+                  options={clientOptions}
+                  value={formData.client_id}
+                  onChange={handleClientChange}
+                  placeholder="Select client..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-date">Date</Label>
+                  <Input 
+                    id="edit-date" 
+                    type="date" 
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    required 
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-time">Time</Label>
+                  <Input 
+                    id="edit-time" 
+                    type="time" 
+                    value={formData.time}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    required 
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Type</Label>
+                  <SearchableCombobox
+                    options={[
+                      { value: 'in-office', label: 'In Office' },
+                      { value: 'outdoor', label: 'Outdoor' },
+                      { value: 'virtual', label: 'Virtual' },
+                    ]}
+                    value={formData.type}
+                    onChange={(value) => setFormData({ ...formData, type: value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Status</Label>
+                  <SearchableCombobox
+                    options={[
+                      { value: 'scheduled', label: 'Scheduled' },
+                      { value: 'completed', label: 'Completed' },
+                      { value: 'cancelled', label: 'Cancelled' },
+                    ]}
+                    value={formData.status}
+                    onChange={(value) => setFormData({ ...formData, status: value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateAppointment.isPending}>
+                {updateAppointment.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -304,7 +499,7 @@ export default function Appointments() {
                 <div>
                   <p className="text-sm text-muted-foreground">Date</p>
                   <p className="font-medium">
-                    {format(selectedAppointment.date, 'MMMM d, yyyy')}
+                    {format(new Date(selectedAppointment.date), 'MMMM d, yyyy')}
                   </p>
                 </div>
                 <div>
@@ -313,21 +508,19 @@ export default function Appointments() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Client</p>
-                  <p className="font-medium">{selectedAppointment.clientName}</p>
+                  <p className="font-medium">{selectedAppointment.client_name || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Type</p>
-                  <p className="font-medium capitalize">
-                    {selectedAppointment.type.replace('_', ' ')}
-                  </p>
+                  <p className="font-medium capitalize">{selectedAppointment.type.replace('-', ' ')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{selectedAppointment.clientPhone}</p>
+                  <p className="font-medium">{selectedAppointment.client_phone || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{selectedAppointment.clientEmail}</p>
+                  <p className="font-medium">{selectedAppointment.client_email || '-'}</p>
                 </div>
                 {selectedAppointment.platform && (
                   <div className="col-span-2">
@@ -340,6 +533,17 @@ export default function Appointments() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        title="Cancel Appointment"
+        description="Are you sure you want to cancel this appointment?"
+        confirmLabel="Cancel Appointment"
+        onConfirm={handleDelete}
+        variant="destructive"
+      />
     </div>
   );
 }
