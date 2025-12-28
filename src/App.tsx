@@ -15,6 +15,7 @@ import Cases from "./pages/Cases";
 import Documents from "./pages/Documents";
 import Payments from "./pages/Payments";
 import Invoices from "./pages/Invoices";
+import Expenses from "./pages/Expenses";
 import Appointments from "./pages/Appointments";
 import Credentials from "./pages/Credentials";
 import Users from "./pages/Users";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/documents" element={<Documents />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/invoices" element={<Invoices />} />
+              <Route path="/expenses" element={<Expenses />} />
               <Route path="/appointments" element={<Appointments />} />
               <Route path="/credentials" element={<Credentials />} />
               <Route path="/users" element={<Users />} />
