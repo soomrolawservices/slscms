@@ -31,6 +31,7 @@ import ClientSignup from "./pages/ClientSignup";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
 import Messages from "./pages/Messages";
+import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
 // ITR Portal
@@ -49,7 +50,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

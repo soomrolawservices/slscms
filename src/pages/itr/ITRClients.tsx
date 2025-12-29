@@ -91,12 +91,12 @@ export default function ITRClients() {
   const [selectedClientsForBulk, setSelectedClientsForBulk] = useState<string[]>([]);
 
   const activeClients = clients.filter(c => c.status === 'active');
-  const clientOptions = activeClients.map(c => ({ value: c.id, label: c.name }));
   const memberOptions = teamMembers.map(m => ({ value: m.id, label: m.name }));
 
   // Filter clients not already in returns for this year
   const existingClientIds = returns.map((r: any) => r.client_id);
-  const availableClientsForBulk = activeClients.filter(c => !existingClientIds.includes(c.id));
+  const availableClients = activeClients.filter(c => !existingClientIds.includes(c.id));
+  const clientOptions = availableClients.map(c => ({ value: c.id, label: c.name }));
 
   const handleBulkAddClients = async () => {
     if (selectedClientsForBulk.length === 0 || !selectedYear) return;
@@ -435,11 +435,11 @@ export default function ITRClients() {
             <p className="text-sm text-muted-foreground">
               Select active clients to add to this fiscal year's ITR returns.
             </p>
-            {availableClientsForBulk.length === 0 ? (
+            {availableClients.length === 0 ? (
               <p className="text-center py-8 text-muted-foreground">All active clients are already added for this year.</p>
             ) : (
               <div className="border-2 border-border rounded-lg divide-y divide-border max-h-[400px] overflow-y-auto">
-                {availableClientsForBulk.map((client) => (
+                {availableClients.map((client) => (
                   <label key={client.id} className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer">
                     <input
                       type="checkbox"
@@ -465,7 +465,7 @@ export default function ITRClients() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSelectedClientsForBulk(availableClientsForBulk.map(c => c.id))}
+                onClick={() => setSelectedClientsForBulk(availableClients.map(c => c.id))}
               >
                 Select All
               </Button>
