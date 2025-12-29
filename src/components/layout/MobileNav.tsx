@@ -16,7 +16,8 @@ import {
   UserPlus,
   BarChart3,
   MessageSquare,
-  Sliders
+  Sliders,
+  Calculator
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   UserPlus,
   BarChart3,
   MessageSquare,
+  Calculator,
 };
 
 // Admin-only nav items

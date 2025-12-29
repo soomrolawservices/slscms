@@ -52,6 +52,7 @@ export default function Settings() {
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           {isAdmin && <TabsTrigger value="signups">Signup Controls</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="portals">Portals</TabsTrigger>}
           {isAdmin && <TabsTrigger value="dropdowns">Dropdowns</TabsTrigger>}
         </TabsList>
 
@@ -195,6 +196,49 @@ export default function Settings() {
                     <div className="p-4 bg-muted/50 border-2 border-border rounded-lg">
                       <p className="text-sm text-muted-foreground">
                         <strong>Note:</strong> Disabling signups will prevent new users from registering. Existing users will not be affected.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* Portal Controls - Admin Only */}
+        {isAdmin && (
+          <TabsContent value="portals">
+            <Card className="border-2 border-border">
+              <CardHeader className="border-b-2 border-border">
+                <CardTitle>Portal Controls</CardTitle>
+                <CardDescription>
+                  Enable or disable seasonal portals
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                {signupLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Loading settings...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-6 max-w-md">
+                    <div className="flex items-center justify-between p-4 border-2 border-border rounded-lg">
+                      <div>
+                        <p className="font-medium">Income Tax Return Portal</p>
+                        <p className="text-sm text-muted-foreground">
+                          Seasonal portal for ITR filing (July - October)
+                        </p>
+                      </div>
+                      <Switch
+                        checked={signupSettings?.itr_portal_enabled ?? false}
+                        onCheckedChange={(value) => handleSignupToggle('itr_portal_enabled', value)}
+                        disabled={updateSignupSetting.isPending}
+                      />
+                    </div>
+                    <div className="p-4 bg-muted/50 border-2 border-border rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Note:</strong> When enabled, the ITR Portal will appear in the sidebar for admin and team members.
                       </p>
                     </div>
                   </div>

@@ -87,13 +87,12 @@ export default function ITRDashboard() {
               title="Total Clients"
               value={stats?.totalClients || 0}
               icon={Users}
-              trend={{ value: 0, isPositive: true }}
             />
             <KpiCard
               title="Filed"
               value={stats?.filed || 0}
               icon={CheckCircle}
-              trend={{ value: stats?.totalClients ? Math.round((stats.filed / stats.totalClients) * 100) : 0, isPositive: true }}
+              trend={{ value: stats?.totalClients ? Math.round((stats.filed / stats.totalClients) * 100) : 0, label: 'completion' }}
             />
             <KpiCard
               title="In Progress"
