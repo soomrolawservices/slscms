@@ -1,72 +1,42 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Scale, 
-  Users, 
-  FileText, 
-  Calendar, 
-  DollarSign, 
-  Shield, 
-  Clock, 
-  BarChart3,
-  ArrowRight,
-  CheckCircle2
-} from 'lucide-react';
-
-const features = [
-  {
-    icon: Users,
-    title: 'Client Management',
-    description: 'Manage all your clients with comprehensive profiles, contact details, and case history.',
-  },
-  {
-    icon: FileText,
-    title: 'Case Tracking',
-    description: 'Track case progress, deadlines, and milestones with intuitive status management.',
-  },
-  {
-    icon: Calendar,
-    title: 'Appointments',
-    description: 'Schedule and manage appointments with automatic reminders and calendar integration.',
-  },
-  {
-    icon: DollarSign,
-    title: 'Invoicing & Payments',
-    description: 'Generate professional invoices, track payments, and manage billing efficiently.',
-  },
-  {
-    icon: Shield,
-    title: 'Secure Documents',
-    description: 'Store and manage legal documents securely with role-based access controls.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Analytics & Reports',
-    description: 'Gain insights with comprehensive reports and analytics dashboards.',
-  },
-];
-
-const benefits = [
-  'Streamlined client communication',
-  'Automated appointment reminders',
-  'Secure document management',
-  'Real-time case status tracking',
-  'Professional invoice generation',
-  'Team collaboration tools',
-  'Role-based access control',
-  'Expense tracking and budgets',
-];
-
+import { Scale, Users, FileText, Calendar, DollarSign, Shield, Clock, BarChart3, ArrowRight, CheckCircle2 } from 'lucide-react';
+const features = [{
+  icon: Users,
+  title: 'Client Management',
+  description: 'Manage all your clients with comprehensive profiles, contact details, and case history.'
+}, {
+  icon: FileText,
+  title: 'Case Tracking',
+  description: 'Track case progress, deadlines, and milestones with intuitive status management.'
+}, {
+  icon: Calendar,
+  title: 'Appointments',
+  description: 'Schedule and manage appointments with automatic reminders and calendar integration.'
+}, {
+  icon: DollarSign,
+  title: 'Invoicing & Payments',
+  description: 'Generate professional invoices, track payments, and manage billing efficiently.'
+}, {
+  icon: Shield,
+  title: 'Secure Documents',
+  description: 'Store and manage legal documents securely with role-based access controls.'
+}, {
+  icon: BarChart3,
+  title: 'Analytics & Reports',
+  description: 'Gain insights with comprehensive reports and analytics dashboards.'
+}];
+const benefits = ['Streamlined client communication', 'Automated appointment reminders', 'Secure document management', 'Real-time case status tracking', 'Professional invoice generation', 'Team collaboration tools', 'Role-based access control', 'Expense tracking and budgets'];
 export default function Index() {
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Navigation */}
       <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Scale className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold">Soomro Law</span>
+            <span className="text-xl font-bold">Soomro Law Services
+          </span>
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
@@ -123,8 +93,7 @@ export default function Index() {
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature) => (
-              <Card key={feature.title} className="border-2 border-border hover:border-primary/50 transition-colors">
+            {features.map(feature => <Card key={feature.title} className="border-2 border-border hover:border-primary/50 transition-colors">
                 <CardHeader>
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                     <feature.icon className="h-6 w-6 text-primary" />
@@ -132,8 +101,7 @@ export default function Index() {
                   <CardTitle>{feature.title}</CardTitle>
                   <CardDescription>{feature.description}</CardDescription>
                 </CardHeader>
-              </Card>
-            ))}
+              </Card>)}
           </div>
         </div>
       </section>
@@ -151,12 +119,10 @@ export default function Index() {
                 and provide better service to your clients.
               </p>
               <div className="grid sm:grid-cols-2 gap-4">
-                {benefits.map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-2">
+                {benefits.map(benefit => <div key={benefit} className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
                     <span>{benefit}</span>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </div>
             <div className="bg-muted rounded-2xl p-8">
@@ -219,7 +185,7 @@ export default function Index() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <Scale className="h-6 w-6 text-primary" />
-              <span className="font-bold">Soomro Law</span>
+              <span className="font-bold">Soomro Law Services</span>
             </div>
             <p className="text-muted-foreground text-sm">
               © {new Date().getFullYear()} Soomro Law Associates. All rights reserved.
@@ -231,6 +197,5 @@ export default function Index() {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 }
