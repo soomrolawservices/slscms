@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, FileText, Building2, Upload } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, FileText, Building2, Upload, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -87,10 +87,31 @@ export default function ITRClients() {
   const deleteBank = useDeleteClientBank();
   const upsertStatement = useUpsertBankStatement();
   const [newBankName, setNewBankName] = useState('');
+  const [isBulkAddOpen, setIsBulkAddOpen] = useState(false);
+  const [selectedClientsForBulk, setSelectedClientsForBulk] = useState<string[]>([]);
 
   const activeClients = clients.filter(c => c.status === 'active');
   const clientOptions = activeClients.map(c => ({ value: c.id, label: c.name }));
   const memberOptions = teamMembers.map(m => ({ value: m.id, label: m.name }));
+
+  // Filter clients not already in returns for this year
+  const existingClientIds = returns.map((r: any) => r.client_id);
+  const availableClientsForBulk = activeClients.filter(c => !existingClientIds.includes(c.id));
+
+  const handleBulkAddClients = async () => {
+    if (selectedClientsForBulk.length === 0 || !selectedYear) return;
+    
+    for (const clientId of selectedClientsForBulk) {
+      await createReturn.mutateAsync({
+        client_id: clientId,
+        fiscal_year_id: selectedYear,
+      });
+    }
+    
+    setSelectedClientsForBulk([]);
+    setIsBulkAddOpen(false);
+    toast({ title: `Added ${selectedClientsForBulk.length} clients` });
+  };
 
   const resetForm = () => {
     setFormData({ client_id: '', assigned_to: '', title: '', progress: 'pending', payment_amount: 0, payment_status: 'unpaid' });
@@ -221,10 +242,16 @@ export default function ITRClients() {
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">ITR Clients</h1>
           <p className="text-muted-foreground">Manage income tax return filings</p>
         </div>
-        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Client Return
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsBulkAddOpen(true)}>
+            <Users className="h-4 w-4 mr-2" />
+            Bulk Add Clients
+          </Button>
+          <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Client Return
+          </Button>
+        </div>
       </div>
 
       <Tabs value={selectedYear} onValueChange={setSelectedYear}>
@@ -397,6 +424,71 @@ export default function ITRClients() {
       </Dialog>
 
       <ConfirmModal open={isDeleteOpen} onOpenChange={setIsDeleteOpen} title="Delete ITR Return" description="This will permanently delete this ITR return record." confirmLabel="Delete" onConfirm={handleDelete} variant="destructive" />
+
+      {/* Bulk Add Clients Modal */}
+      <Dialog open={isBulkAddOpen} onOpenChange={setIsBulkAddOpen}>
+        <DialogContent className="border-2 border-border max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Bulk Add Clients</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select active clients to add to this fiscal year's ITR returns.
+            </p>
+            {availableClientsForBulk.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">All active clients are already added for this year.</p>
+            ) : (
+              <div className="border-2 border-border rounded-lg divide-y divide-border max-h-[400px] overflow-y-auto">
+                {availableClientsForBulk.map((client) => (
+                  <label key={client.id} className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedClientsForBulk.includes(client.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedClientsForBulk([...selectedClientsForBulk, client.id]);
+                        } else {
+                          setSelectedClientsForBulk(selectedClientsForBulk.filter(id => id !== client.id));
+                        }
+                      }}
+                      className="h-4 w-4"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium">{client.name}</p>
+                      <p className="text-sm text-muted-foreground capitalize">{client.client_type}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedClientsForBulk(availableClientsForBulk.map(c => c.id))}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedClientsForBulk([])}
+              >
+                Clear
+              </Button>
+              <span className="text-sm text-muted-foreground ml-auto">
+                {selectedClientsForBulk.length} selected
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkAddClients} disabled={selectedClientsForBulk.length === 0 || createReturn.isPending}>
+              {createReturn.isPending ? 'Adding...' : `Add ${selectedClientsForBulk.length} Clients`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -27,6 +27,7 @@ import { useClients } from '@/hooks/useClients';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { BulkAssignment } from '@/components/assignments/BulkAssignment';
+import { BulkImportDialog } from '@/components/bulk-import/BulkImportDialog';
 import { format } from 'date-fns';
 
 interface CaseWithClient {
@@ -57,6 +58,32 @@ export default function Cases() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<CaseWithClient | null>(null);
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+
+  const handleBulkImport = async (data: Record<string, string>[]) => {
+    let successCount = 0;
+    const errors: string[] = [];
+    
+    for (const row of data) {
+      try {
+        const client = clients.find(c => c.name.toLowerCase() === row.client?.toLowerCase());
+        if (!client) {
+          errors.push(`${row.title}: Client "${row.client}" not found`);
+          continue;
+        }
+        await createCase.mutateAsync({
+          title: row.title,
+          description: row.description || undefined,
+          client_id: client.id,
+        });
+        successCount++;
+      } catch (error: any) {
+        errors.push(`${row.title}: ${error.message}`);
+      }
+    }
+    
+    return { success: successCount, errors };
+  };
 
   const [formData, setFormData] = useState({
     title: '',
@@ -180,12 +207,24 @@ export default function Cases() {
               onComplete={() => setSelectedCaseIds([])}
             />
           )}
+          <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Import
+          </Button>
           <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
             <Plus className="h-4 w-4 mr-2" />
             New Case
           </Button>
         </div>
       </div>
+
+      <BulkImportDialog
+        open={isBulkImportOpen}
+        onOpenChange={setIsBulkImportOpen}
+        entityType="cases"
+        onImport={handleBulkImport}
+      />
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="border-2 border-border">

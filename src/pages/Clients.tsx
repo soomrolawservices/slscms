@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Link as LinkIcon } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Link as LinkIcon, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -32,6 +32,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { ClientAccountLinker } from '@/components/admin/ClientAccountLinker';
 import { BulkAssignment } from '@/components/assignments/BulkAssignment';
+import { BulkImportDialog } from '@/components/bulk-import/BulkImportDialog';
+import { toast } from '@/hooks/use-toast';
 
 export default function Clients() {
   const { isAdmin } = useAuth();
@@ -48,6 +50,31 @@ export default function Clients() {
   const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
   const [showLinker, setShowLinker] = useState(false);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+
+  const handleBulkImport = async (data: Record<string, string>[]) => {
+    let successCount = 0;
+    const errors: string[] = [];
+    
+    for (const row of data) {
+      try {
+        await createClient.mutateAsync({
+          name: row.name,
+          client_type: row.client_type || 'individual',
+          phone: row.phone || undefined,
+          email: row.email || undefined,
+          cnic: row.cnic || undefined,
+          region: row.region || undefined,
+          status: row.status || 'active',
+        });
+        successCount++;
+      } catch (error: any) {
+        errors.push(`${row.name}: ${error.message}`);
+      }
+    }
+    
+    return { success: successCount, errors };
+  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -183,12 +210,23 @@ export default function Clients() {
               {showLinker ? 'Hide' : 'Link'} Accounts
             </Button>
           )}
+          <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Import
+          </Button>
           <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
             <Plus className="h-4 w-4 mr-2" />
             Add Client
           </Button>
         </div>
       </div>
+
+      <BulkImportDialog
+        open={isBulkImportOpen}
+        onOpenChange={setIsBulkImportOpen}
+        entityType="clients"
+        onImport={handleBulkImport}
+      />
 
       {/* Client Account Linker */}
       {isAdmin && showLinker && (
