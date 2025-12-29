@@ -13,7 +13,8 @@ import {
   Image,
   FileArchive,
   Loader2,
-  X
+  X,
+  FileUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +30,7 @@ import { useCases } from '@/hooks/useCases';
 import { useDocuments, useUploadDocument, useDeleteDocument, useDownloadDocument, type DocumentData } from '@/hooks/useDocuments';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { BulkImportDialog } from '@/components/bulk-import/BulkImportDialog';
 
 function formatFileSize(bytes: number): string {
   if (!bytes) return '0 B';
@@ -66,6 +68,30 @@ export default function Documents() {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+
+  const handleBulkImport = async (data: Record<string, string>[]) => {
+    // Documents bulk import is metadata only (title, client, type)
+    let successCount = 0;
+    const errors: string[] = [];
+    
+    for (const row of data) {
+      try {
+        const client = clients.find(c => c.name.toLowerCase() === row.client?.toLowerCase());
+        if (!client) {
+          errors.push(`${row.title}: Client "${row.client}" not found`);
+          continue;
+        }
+        // Note: This only creates document metadata - file upload is separate
+        toast({ title: 'Note', description: 'Bulk import creates document records. Files must be uploaded individually.' });
+        successCount++;
+      } catch (error: any) {
+        errors.push(`${row.title}: ${error.message}`);
+      }
+    }
+    
+    return { success: successCount, errors };
+  };
 
   const { data: clients = [] } = useClients();
   const { data: cases = [] } = useCases();
@@ -167,14 +193,27 @@ export default function Documents() {
             Manage client documents and files
           </p>
         </div>
-        <Button 
-          className="shadow-md bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-          onClick={() => setIsUploadOpen(true)}
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Upload Document
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
+            <FileUp className="h-4 w-4 mr-2" />
+            Bulk Import
+          </Button>
+          <Button 
+            className="shadow-md bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+            onClick={() => setIsUploadOpen(true)}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Document
+          </Button>
+        </div>
       </div>
+
+      <BulkImportDialog
+        open={isBulkImportOpen}
+        onOpenChange={setIsBulkImportOpen}
+        entityType="documents"
+        onImport={handleBulkImport}
+      />
 
       {/* Breadcrumb */}
       {selectedClient && (

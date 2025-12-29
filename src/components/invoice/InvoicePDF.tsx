@@ -1,6 +1,13 @@
 import { format } from 'date-fns';
 import soomroLogo from '@/assets/soomro-law-logo.png';
 
+export interface LineItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+}
+
 interface InvoiceData {
   invoice_id: string;
   amount: number;
@@ -16,6 +23,7 @@ interface InvoiceData {
   case?: {
     title: string;
   };
+  line_items?: LineItem[];
 }
 
 // Convert image to base64 for embedding in HTML
@@ -479,19 +487,35 @@ export async function generateInvoicePDF(invoice: InvoiceData, download: boolean
           <thead>
             <tr>
               <th>Description</th>
-              <th style="width: 150px;">Amount</th>
+              <th style="width: 80px;">Qty</th>
+              <th style="width: 120px;">Unit Price</th>
+              <th style="width: 120px;">Amount</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>
-                <strong>Legal Services</strong><br>
-                <span style="color: #666; font-size: 13px;">
-                  ${invoice.case?.title || 'Professional legal consultation and services'}
-                </span>
-              </td>
-              <td>PKR ${Number(invoice.amount).toLocaleString()}</td>
-            </tr>
+            ${invoice.line_items && invoice.line_items.length > 0 
+              ? invoice.line_items.map(item => `
+                <tr>
+                  <td>${item.description}</td>
+                  <td style="text-align: center;">${item.quantity}</td>
+                  <td style="text-align: right;">PKR ${Number(item.unit_price).toLocaleString()}</td>
+                  <td style="text-align: right;">PKR ${Number(item.amount).toLocaleString()}</td>
+                </tr>
+              `).join('')
+              : `
+                <tr>
+                  <td>
+                    <strong>Legal Services</strong><br>
+                    <span style="color: #666; font-size: 13px;">
+                      ${invoice.case?.title || 'Professional legal consultation and services'}
+                    </span>
+                  </td>
+                  <td style="text-align: center;">1</td>
+                  <td style="text-align: right;">PKR ${Number(invoice.amount).toLocaleString()}</td>
+                  <td style="text-align: right;">PKR ${Number(invoice.amount).toLocaleString()}</td>
+                </tr>
+              `
+            }
           </tbody>
         </table>
         
