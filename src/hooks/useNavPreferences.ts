@@ -33,6 +33,7 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { id: 'users', title: 'Users', url: '/users', icon: 'UserCog' },
   { id: 'permissions', title: 'Permissions', url: '/permissions', icon: 'Shield' },
   { id: 'settings', title: 'Settings', url: '/settings', icon: 'Settings' },
+  { id: 'itr', title: 'ITR Portal', url: '/itr', icon: 'Calculator' },
 ];
 
 export function useNavPreferences() {

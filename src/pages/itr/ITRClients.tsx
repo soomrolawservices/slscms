@@ -97,7 +97,7 @@ export default function ITRClients() {
   };
 
   const columns: Column<any>[] = [
-    { key: 'sr', header: 'SR.', render: (_, index) => index + 1 },
+    { key: 'sr', header: 'SR.', render: (row) => returns.indexOf(row) + 1 },
     { key: 'title', header: 'Title', render: (row) => row.title || row.clients?.name || '-' },
     { key: 'year', header: 'Year', render: (row) => row.itr_fiscal_years?.year_label || '-' },
     { key: 'type', header: 'Type', render: (row) => <span className="capitalize">{row.clients?.client_type}</span> },

@@ -33,6 +33,12 @@ import Reports from "./pages/Reports";
 import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 
+// ITR Portal
+import ITRLayout from "./pages/itr/ITRLayout";
+import ITRDashboard from "./pages/itr/ITRDashboard";
+import ITRClients from "./pages/itr/ITRClients";
+import ITRExtensions from "./pages/itr/ITRExtensions";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -143,6 +149,17 @@ const App = () => (
                   <Reports />
                 </ProtectedRoute>
               } />
+
+              {/* ITR Portal Routes */}
+              <Route path="/itr" element={
+                <ProtectedRoute allowedRoles={['admin', 'team_member']}>
+                  <ITRLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<ITRDashboard />} />
+                <Route path="clients" element={<ITRClients />} />
+                <Route path="extensions" element={<ITRExtensions />} />
+              </Route>
             </Route>
             
             <Route path="*" element={<NotFound />} />

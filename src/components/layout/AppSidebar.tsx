@@ -16,13 +16,15 @@ import {
   ChevronRight,
   UserPlus,
   BarChart3,
-  MessageSquare
+  MessageSquare,
+  Calculator
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useITRPortalEnabled } from '@/hooks/useITRPortal';
 
 const adminNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
@@ -57,8 +59,14 @@ const teamNavItems = [
 export function AppSidebar() {
   const { user, profile, isAdmin, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const { data: itrEnabled } = useITRPortalEnabled();
 
-  const navItems = isAdmin ? adminNavItems : teamNavItems;
+  const baseNavItems = isAdmin ? adminNavItems : teamNavItems;
+  
+  // Add ITR Portal if enabled
+  const navItems = itrEnabled 
+    ? [...baseNavItems.slice(0, -1), { title: 'ITR Portal', url: '/itr', icon: Calculator }, baseNavItems[baseNavItems.length - 1]]
+    : baseNavItems;
 
   return (
     <aside 
