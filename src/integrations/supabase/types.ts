@@ -465,6 +465,44 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_line_items: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string
+          id: string
+          invoice_id: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description: string
+          id?: string
+          invoice_id: string
+          quantity?: number
+          unit_price: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string
+          id?: string
+          invoice_id?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
@@ -525,6 +563,176 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itr_bank_statements: {
+        Row: {
+          bank_id: string
+          created_at: string | null
+          file_path: string | null
+          id: string
+          return_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          bank_id: string
+          created_at?: string | null
+          file_path?: string | null
+          id?: string
+          return_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          bank_id?: string
+          created_at?: string | null
+          file_path?: string | null
+          id?: string
+          return_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itr_bank_statements_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "itr_client_banks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itr_bank_statements_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "itr_returns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itr_client_banks: {
+        Row: {
+          bank_name: string
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+        }
+        Insert: {
+          bank_name: string
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+        }
+        Update: {
+          bank_name?: string
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itr_client_banks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itr_fiscal_years: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          start_date: string
+          year_label: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          start_date: string
+          year_label: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          start_date?: string
+          year_label?: string
+        }
+        Relationships: []
+      }
+      itr_returns: {
+        Row: {
+          assigned_to: string | null
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          extension_status: string | null
+          fiscal_year_id: string
+          has_extension: boolean | null
+          id: string
+          payment_amount: number | null
+          payment_status: string
+          progress: string
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          extension_status?: string | null
+          fiscal_year_id: string
+          has_extension?: boolean | null
+          id?: string
+          payment_amount?: number | null
+          payment_status?: string
+          progress?: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          extension_status?: string | null
+          fiscal_year_id?: string
+          has_extension?: boolean | null
+          id?: string
+          payment_amount?: number | null
+          payment_status?: string
+          progress?: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itr_returns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itr_returns_fiscal_year_id_fkey"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "itr_fiscal_years"
             referencedColumns: ["id"]
           },
         ]
