@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { exportToCSV, exportToPDF } from '@/lib/export-utils';
+import { exportToCSV, exportToPDF, type ExportColumn } from '@/lib/export-utils';
 import { toast } from '@/hooks/use-toast';
 
 export interface Column<T> {
@@ -127,12 +127,22 @@ export function DataTable<T extends { id: string }>({
   };
 
   const handleExportCSV = () => {
-    exportToCSV(sortedData as unknown as Record<string, unknown>[], columns as { key: string; header: string }[], title.toLowerCase().replace(/\s+/g, '-'));
+    const exportColumns: ExportColumn<T>[] = columns.map(col => ({
+      key: col.key as string,
+      header: col.header,
+      render: col.render
+    }));
+    exportToCSV(sortedData as unknown as Record<string, unknown>[], exportColumns as ExportColumn<Record<string, unknown>>[], title.toLowerCase().replace(/\s+/g, '-'));
     toast({ title: 'Export successful', description: `${title} exported to CSV` });
   };
 
   const handleExportPDF = () => {
-    exportToPDF(sortedData as unknown as Record<string, unknown>[], columns as { key: string; header: string }[], title.toLowerCase().replace(/\s+/g, '-'), title);
+    const exportColumns: ExportColumn<T>[] = columns.map(col => ({
+      key: col.key as string,
+      header: col.header,
+      render: col.render
+    }));
+    exportToPDF(sortedData as unknown as Record<string, unknown>[], exportColumns as ExportColumn<Record<string, unknown>>[], title.toLowerCase().replace(/\s+/g, '-'), title);
   };
 
   if (isLoading) {

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.expense-notification]
 verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = true

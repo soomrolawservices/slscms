@@ -1,26 +1,54 @@
 // Export utilities for PDF and Excel with branded Soomro Law Services design
+import ReactDOMServer from 'react-dom/server';
+
+export interface ExportColumn<T> {
+  key: keyof T | string;
+  header: string;
+  render?: (row: T) => React.ReactNode;
+}
+
+function getRenderedValue<T extends Record<string, unknown>>(
+  row: T,
+  column: ExportColumn<T>
+): string {
+  // If column has a render function, try to extract the text content
+  if (column.render) {
+    const rendered = column.render(row);
+    // Handle React elements - extract text content
+    if (rendered && typeof rendered === 'object') {
+      try {
+        const html = ReactDOMServer.renderToStaticMarkup(rendered as React.ReactElement);
+        // Strip HTML tags and decode entities
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        return doc.body.textContent || '';
+      } catch {
+        return String(rendered);
+      }
+    }
+    return String(rendered ?? '');
+  }
+
+  const value = row[column.key as keyof T];
+  if (value instanceof Date) {
+    return value.toLocaleDateString();
+  }
+  if (typeof value === 'object' && value !== null) {
+    return JSON.stringify(value);
+  }
+  return String(value ?? '');
+}
 
 export function exportToCSV<T extends Record<string, unknown>>(
   data: T[],
-  columns: { key: keyof T | string; header: string }[],
+  columns: ExportColumn<T>[],
   filename: string
 ) {
   // Create header row
   const headers = columns.map((col) => col.header);
   
-  // Create data rows
+  // Create data rows using rendered values
   const rows = data.map((item) =>
-    columns.map((col) => {
-      const value = item[col.key as keyof T];
-      // Handle special cases
-      if (value instanceof Date) {
-        return value.toLocaleDateString();
-      }
-      if (typeof value === 'object' && value !== null) {
-        return JSON.stringify(value);
-      }
-      return String(value ?? '');
-    })
+    columns.map((col) => getRenderedValue(item, col))
   );
 
   // Combine headers and rows
@@ -30,7 +58,7 @@ export function exportToCSV<T extends Record<string, unknown>>(
       row.map((cell) => {
         // Escape quotes and wrap in quotes if contains comma
         const escaped = cell.replace(/"/g, '""');
-        return escaped.includes(',') ? `"${escaped}"` : escaped;
+        return escaped.includes(',') || escaped.includes('\n') ? `"${escaped}"` : escaped;
       }).join(',')
     ),
   ].join('\n');
@@ -46,7 +74,7 @@ export function exportToCSV<T extends Record<string, unknown>>(
 
 export function exportToPDF<T extends Record<string, unknown>>(
   data: T[],
-  columns: { key: keyof T | string; header: string }[],
+  columns: ExportColumn<T>[],
   filename: string,
   title: string
 ) {
@@ -56,15 +84,7 @@ export function exportToPDF<T extends Record<string, unknown>>(
   
   const rows = data.map((item, index) => {
     const cells = columns.map((col) => {
-      const value = item[col.key as keyof T];
-      let displayValue = '';
-      if (value instanceof Date) {
-        displayValue = value.toLocaleDateString();
-      } else if (typeof value === 'object' && value !== null) {
-        displayValue = JSON.stringify(value);
-      } else {
-        displayValue = String(value ?? '');
-      }
+      const displayValue = getRenderedValue(item, col);
       return `<td>${displayValue}</td>`;
     }).join('');
     return `<tr class="${index % 2 === 0 ? 'even' : 'odd'}">${cells}</tr>`;
