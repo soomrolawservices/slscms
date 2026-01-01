@@ -125,8 +125,8 @@ export function ExpenseReports({ expenses }: ExpenseReportsProps) {
             <CardTitle className="text-lg">Total Spending (12 months)</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">${totalSpending.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">Avg ${avgMonthlySpending.toLocaleString()} / month</p>
+            <p className="text-3xl font-bold">PKR {totalSpending.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">Avg PKR {avgMonthlySpending.toLocaleString()} / month</p>
           </CardContent>
         </Card>
         <Card className="border-2 border-border">
@@ -137,7 +137,7 @@ export function ExpenseReports({ expenses }: ExpenseReportsProps) {
             {categoryData[0] && (
               <>
                 <p className="text-3xl font-bold">{categoryData[0].label}</p>
-                <p className="text-sm text-muted-foreground">${categoryData[0].amount.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">PKR {categoryData[0].amount.toLocaleString()}</p>
               </>
             )}
           </CardContent>
@@ -202,7 +202,7 @@ export function ExpenseReports({ expenses }: ExpenseReportsProps) {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => `$${value.toLocaleString()}`}
+                    formatter={(value: number) => `PKR ${value.toLocaleString()}`}
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '2px solid hsl(var(--border))',
@@ -216,7 +216,7 @@ export function ExpenseReports({ expenses }: ExpenseReportsProps) {
                 {categoryData.map(cat => (
                   <div key={cat.category} className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.fill }} />
-                    <span>{cat.label}: ${cat.amount.toLocaleString()}</span>
+                    <span>{cat.label}: PKR {cat.amount.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -237,7 +237,7 @@ export function ExpenseReports({ expenses }: ExpenseReportsProps) {
                   <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                   <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                   <Tooltip
-                    formatter={(value: number) => `$${value?.toLocaleString() || 0}`}
+                    formatter={(value: number) => `PKR ${value?.toLocaleString() || 0}`}
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '2px solid hsl(var(--border))',

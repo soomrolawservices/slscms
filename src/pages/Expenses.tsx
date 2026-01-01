@@ -100,7 +100,7 @@ export default function Expenses() {
       key: 'amount',
       header: 'Amount',
       sortable: true,
-      render: (row) => <span className="font-bold">${Number(row.amount).toLocaleString()}</span>,
+      render: (row) => <span className="font-bold">PKR {Number(row.amount).toLocaleString()}</span>,
     },
     {
       key: 'category',
@@ -445,7 +445,7 @@ export default function Expenses() {
               <div><p className="text-sm text-muted-foreground">Date</p><p className="font-medium">{format(new Date(selectedExpense.date), 'MMM d, yyyy')}</p></div>
               <div><p className="text-sm text-muted-foreground">Status</p><StatusBadge status={selectedExpense.status} /></div>
               <div><p className="text-sm text-muted-foreground">Title</p><p className="font-medium">{selectedExpense.title}</p></div>
-              <div><p className="text-sm text-muted-foreground">Amount</p><p className="font-bold">${Number(selectedExpense.amount).toLocaleString()}</p></div>
+              <div><p className="text-sm text-muted-foreground">Amount</p><p className="font-bold">PKR {Number(selectedExpense.amount).toLocaleString()}</p></div>
               <div><p className="text-sm text-muted-foreground">Category</p><p className="font-medium">{EXPENSE_CATEGORIES.find(c => c.value === selectedExpense.category)?.label || selectedExpense.category || '-'}</p></div>
               <div>
                 <p className="text-sm text-muted-foreground">Receipt</p>

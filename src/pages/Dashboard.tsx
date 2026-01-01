@@ -109,7 +109,7 @@ export default function Dashboard() {
         />
         <KpiCard
           title="Pending Payments"
-          value={`$${pendingPayments.toLocaleString()}`}
+          value={`PKR ${pendingPayments.toLocaleString()}`}
           icon={CreditCard}
           trend={{ value: -5, label: 'from last week' }}
           variant="warning"
@@ -268,7 +268,7 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground">Scheduled</p>
             </div>
             <div className="p-4 rounded-xl bg-gradient-to-br from-rose-500/10 to-red-500/5 text-center">
-              <p className="text-2xl font-bold text-rose-600">${pendingPayments.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-rose-600">PKR {pendingPayments.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground">Pending</p>
             </div>
           </div>
