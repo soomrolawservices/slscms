@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -25,6 +25,7 @@ import { usePayments, useCreatePayment, useUpdatePayment, useDeletePayment } fro
 import { useClients } from '@/hooks/useClients';
 import { useCases } from '@/hooks/useCases';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
+import { BulkImportDialog } from '@/components/bulk-import/BulkImportDialog';
 import { format } from 'date-fns';
 
 interface PaymentWithRelations {
@@ -56,6 +57,45 @@ export default function Payments() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentWithRelations | null>(null);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+
+  const handleBulkImport = async (data: Record<string, string>[]) => {
+    let successCount = 0;
+    const errors: string[] = [];
+    
+    for (const row of data) {
+      try {
+        const clientName = row.client_name || row.client;
+        const client = clients.find(c => c.name.toLowerCase() === clientName?.toLowerCase());
+        if (!client) {
+          errors.push(`${row.title}: Client "${clientName}" not found`);
+          continue;
+        }
+        
+        let status = (row.status || 'pending').toLowerCase().trim();
+        if (!['pending', 'completed', 'failed'].includes(status)) {
+          status = 'pending';
+        }
+
+        const caseTitle = row.case_title || row.case;
+        const caseItem = caseTitle ? (cases as any[]).find(c => c.title?.toLowerCase() === caseTitle?.toLowerCase()) : null;
+
+        await createPayment.mutateAsync({
+          title: row.title,
+          amount: parseFloat(row.amount) || 0,
+          client_id: client.id,
+          case_id: caseItem?.id,
+          payment_date: row.payment_date || row.date,
+          status: status,
+        });
+        successCount++;
+      } catch (error: any) {
+        errors.push(`${row.title}: ${error.message}`);
+      }
+    }
+    
+    return { success: successCount, errors };
+  };
 
   const [formData, setFormData] = useState({
     title: '',
@@ -100,7 +140,7 @@ export default function Payments() {
       key: 'amount',
       header: 'Amount',
       sortable: true,
-      render: (row) => <span className="font-bold">${row.amount.toLocaleString()}</span>,
+      render: (row) => <span className="font-bold">PKR {row.amount.toLocaleString()}</span>,
     },
     {
       key: 'client_id',
@@ -193,11 +233,24 @@ export default function Payments() {
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Payments</h1>
           <p className="text-muted-foreground">Track payment records and transactions</p>
         </div>
-        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
-          <Plus className="h-4 w-4 mr-2" />
-          Record Payment
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Import
+          </Button>
+          <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="shadow-xs">
+            <Plus className="h-4 w-4 mr-2" />
+            Record Payment
+          </Button>
+        </div>
       </div>
+
+      <BulkImportDialog
+        open={isBulkImportOpen}
+        onOpenChange={setIsBulkImportOpen}
+        entityType="payments"
+        onImport={handleBulkImport}
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -256,7 +309,7 @@ export default function Payments() {
                 <Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="amount">Amount ($)</Label>
+                <Label htmlFor="amount">Amount (PKR)</Label>
                 <Input id="amount" type="number" min="0" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} required />
               </div>
               <div className="grid gap-2">
@@ -297,7 +350,7 @@ export default function Payments() {
                 <Input id="edit-title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-amount">Amount ($)</Label>
+                <Label htmlFor="edit-amount">Amount (PKR)</Label>
                 <Input id="edit-amount" type="number" min="0" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} required />
               </div>
               <div className="grid gap-2">
@@ -326,7 +379,7 @@ export default function Payments() {
               <div><p className="text-sm text-muted-foreground">Payment ID</p><p className="font-mono font-medium">{selectedPayment.payment_id}</p></div>
               <div><p className="text-sm text-muted-foreground">Status</p><StatusBadge status={selectedPayment.status} /></div>
               <div><p className="text-sm text-muted-foreground">Title</p><p className="font-medium">{selectedPayment.title}</p></div>
-              <div><p className="text-sm text-muted-foreground">Amount</p><p className="font-bold">${selectedPayment.amount.toLocaleString()}</p></div>
+              <div><p className="text-sm text-muted-foreground">Amount</p><p className="font-bold">PKR {selectedPayment.amount.toLocaleString()}</p></div>
               <div><p className="text-sm text-muted-foreground">Client</p><p className="font-medium">{selectedPayment.clients?.name || 'Unknown'}</p></div>
               <div><p className="text-sm text-muted-foreground">Date</p><p className="font-medium">{selectedPayment.payment_date ? format(new Date(selectedPayment.payment_date), 'MMM d, yyyy') : '-'}</p></div>
             </div>

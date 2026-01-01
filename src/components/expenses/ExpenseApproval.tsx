@@ -111,7 +111,7 @@ export function ExpenseApproval({ expenses, isLoading }: ExpenseApprovalProps) {
       key: 'amount',
       header: 'Amount',
       sortable: true,
-      render: (row) => <span className="font-bold">${Number(row.amount).toLocaleString()}</span>,
+      render: (row) => <span className="font-bold">PKR {Number(row.amount).toLocaleString()}</span>,
     },
     {
       key: 'category',
@@ -199,7 +199,7 @@ export function ExpenseApproval({ expenses, isLoading }: ExpenseApprovalProps) {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Amount</p>
-                  <p className="font-bold">${Number(selectedExpense.amount).toLocaleString()}</p>
+                  <p className="font-bold">PKR {Number(selectedExpense.amount).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Category</p>

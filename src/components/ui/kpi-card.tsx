@@ -68,14 +68,15 @@ export function KpiCard({ title, value, icon: Icon, trend, className, variant = 
           {trend && (
             <div className="flex items-center gap-1.5">
               <span className={cn(
-                "inline-flex items-center gap-1 text-sm font-medium rounded-full px-2 py-0.5",
+                "inline-flex items-center gap-1 text-sm font-semibold rounded-full px-2 py-0.5",
+                "bg-white/20 backdrop-blur-sm",
                 trend.value >= 0 
-                  ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
-                  : "bg-red-500/20 text-red-600 dark:text-red-400"
+                  ? "text-emerald-100" 
+                  : "text-red-100"
               )}>
                 {trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value)}%
               </span>
-              <span className={cn("text-xs", styles.trend)}>{trend.label}</span>
+              <span className={cn("text-xs font-medium", variant === 'default' ? 'text-muted-foreground' : 'text-white/90')}>{trend.label}</span>
             </div>
           )}
         </div>
