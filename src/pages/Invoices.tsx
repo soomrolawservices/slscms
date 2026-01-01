@@ -275,10 +275,17 @@ export default function Invoices() {
           continue;
         }
 
+        // Normalize status
+        let status = (row.status || 'unpaid').toLowerCase().trim();
+        if (!['unpaid', 'paid', 'overdue', 'partial'].includes(status)) {
+          status = 'unpaid';
+        }
+
         const result = await createInvoice.mutateAsync({
           amount,
           client_id: client.id,
           due_date: row.due_date || undefined,
+          status: status,
         });
 
         // Parse line items if provided (format: "desc1:amt1;desc2:amt2")

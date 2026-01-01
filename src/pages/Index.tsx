@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Scale, Users, FileText, Calendar, DollarSign, Shield, Clock, BarChart3, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { SkipToMain } from '@/components/accessibility/SkipToMain';
+import { SEOHead } from '@/components/seo/SEOHead';
+
 const features = [{
   icon: Users,
   title: 'Client Management',
@@ -27,9 +30,18 @@ const features = [{
   title: 'Analytics & Reports',
   description: 'Gain insights with comprehensive reports and analytics dashboards.'
 }];
+
 const benefits = ['Streamlined client communication', 'Automated appointment reminders', 'Secure document management', 'Real-time case status tracking', 'Professional invoice generation', 'Team collaboration tools', 'Role-based access control', 'Expense tracking and budgets'];
+
 export default function Index() {
   return <div className="min-h-screen bg-background">
+      <SkipToMain />
+      <SEOHead 
+        title="Soomro Law Services | Legal Practice Management System"
+        description="Comprehensive legal practice management system for law firms. Manage clients, cases, documents, invoices, and appointments efficiently."
+        keywords="Soomro Law Services, legal practice management, law firm software, case management, Pakistan law firm"
+        canonical="https://slscms.lovable.app/"
+      />
       {/* Navigation */}
       <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -55,7 +67,7 @@ export default function Index() {
       </header>
 
       {/* Main Content */}
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="py-20 lg:py-32">
         <div className="container mx-auto px-4 text-center">

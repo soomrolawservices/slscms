@@ -39,7 +39,7 @@ export function useCreateInvoice() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (data: { amount: number; client_id: string; case_id?: string; due_date?: string }) => {
+    mutationFn: async (data: { amount: number; client_id: string; case_id?: string; due_date?: string; status?: string }) => {
       // Generate invoice ID
       const { count } = await supabase.from('invoices').select('*', { count: 'exact', head: true });
       const invoiceId = `SLS-INV-${String((count || 0) + 1).padStart(3, '0')}`;
@@ -47,7 +47,11 @@ export function useCreateInvoice() {
       const { data: result, error } = await supabase
         .from('invoices')
         .insert({
-          ...data,
+          amount: data.amount,
+          client_id: data.client_id,
+          case_id: data.case_id,
+          due_date: data.due_date,
+          status: data.status || 'unpaid',
           invoice_id: invoiceId,
           created_by: user?.id,
         })

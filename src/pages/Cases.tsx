@@ -66,15 +66,27 @@ export default function Cases() {
     
     for (const row of data) {
       try {
-        const client = clients.find(c => c.name.toLowerCase() === row.client?.toLowerCase());
+        // Try to find client by name (case-insensitive)
+        const clientName = row.client_name || row.client;
+        const client = clients.find(c => c.name.toLowerCase() === clientName?.toLowerCase());
         if (!client) {
-          errors.push(`${row.title}: Client "${row.client}" not found`);
+          errors.push(`${row.title}: Client "${clientName}" not found`);
           continue;
         }
+        
+        // Normalize status
+        let status = (row.status || 'active').toLowerCase().trim();
+        if (!['active', 'in_progress', 'pending', 'closed', 'archived', 'open'].includes(status)) {
+          status = 'active';
+        }
+        // Map 'open' to 'active' for compatibility
+        if (status === 'open') status = 'active';
+
         await createCase.mutateAsync({
           title: row.title,
           description: row.description || undefined,
           client_id: client.id,
+          status: status,
         });
         successCount++;
       } catch (error: any) {
