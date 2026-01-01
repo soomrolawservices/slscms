@@ -53,34 +53,40 @@ export default function Dashboard() {
             Welcome back, <span className="font-medium text-foreground">{profile?.name}</span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isAdmin && (
             <>
               <Button 
                 variant={showAssistant ? "default" : "outline"}
-                className="gap-2"
+                className="gap-2 text-xs sm:text-sm"
+                size="sm"
                 onClick={() => { setShowAssistant(!showAssistant); setShowAnalytics(false); }}
               >
                 <Sparkles className="h-4 w-4" />
-                {showAssistant ? 'Hide Assistant' : 'AI Assistant'}
+                <span className="hidden sm:inline">{showAssistant ? 'Hide Assistant' : 'AI Assistant'}</span>
+                <span className="sm:hidden">AI</span>
               </Button>
               <Button 
                 variant={showAnalytics ? "default" : "outline"}
-                className="gap-2"
+                className="gap-2 text-xs sm:text-sm"
+                size="sm"
                 onClick={() => { setShowAnalytics(!showAnalytics); setShowAssistant(false); }}
               >
                 <Brain className="h-4 w-4" />
-                {showAnalytics ? 'Hide Analytics' : 'AI Analytics'}
+                <span className="hidden sm:inline">{showAnalytics ? 'Hide Analytics' : 'AI Analytics'}</span>
+                <span className="sm:hidden">Analytics</span>
               </Button>
             </>
           )}
           <Button 
             variant="outline" 
-            className="gap-2"
+            className="gap-2 text-xs sm:text-sm"
+            size="sm"
             onClick={() => navigate('/clients')}
           >
             <TrendingUp className="h-4 w-4" />
-            View Reports
+            <span className="hidden sm:inline">View Reports</span>
+            <span className="sm:hidden">Reports</span>
           </Button>
         </div>
       </div>
@@ -131,20 +137,21 @@ export default function Dashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-5">
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
             {quickActions.map((action) => (
               <Button 
                 key={action.label}
                 variant={action.variant}
-                className={`gap-2 shadow-sm hover:shadow-md transition-all ${
+                size="sm"
+                className={`gap-2 shadow-sm hover:shadow-md transition-all text-xs sm:text-sm ${
                   action.variant === 'default' 
                     ? 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary' 
                     : 'hover:border-primary/50'
                 }`}
                 onClick={() => navigate(action.path)}
               >
-                <action.icon className="h-4 w-4" />
-                {action.label}
+                <action.icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{action.label}</span>
               </Button>
             ))}
           </div>
@@ -254,22 +261,22 @@ export default function Dashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 text-center">
-              <p className="text-2xl font-bold text-primary">{totalClients}</p>
-              <p className="text-sm text-muted-foreground">Total Clients</p>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 text-center">
+              <p className="text-xl sm:text-2xl font-bold text-primary">{totalClients}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Total Clients</p>
             </div>
-            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 text-center">
-              <p className="text-2xl font-bold text-emerald-600">{activeCases}</p>
-              <p className="text-sm text-muted-foreground">Active Cases</p>
+            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 text-center">
+              <p className="text-xl sm:text-2xl font-bold text-emerald-600">{activeCases}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Active Cases</p>
             </div>
-            <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 text-center">
-              <p className="text-2xl font-bold text-amber-600">{scheduledAppointments}</p>
-              <p className="text-sm text-muted-foreground">Scheduled</p>
+            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 text-center">
+              <p className="text-xl sm:text-2xl font-bold text-amber-600">{scheduledAppointments}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Scheduled</p>
             </div>
-            <div className="p-4 rounded-xl bg-gradient-to-br from-rose-500/10 to-red-500/5 text-center">
-              <p className="text-2xl font-bold text-rose-600">PKR {pendingPayments.toLocaleString()}</p>
-              <p className="text-sm text-muted-foreground">Pending</p>
+            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-rose-500/10 to-red-500/5 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-rose-600 break-all">PKR {pendingPayments.toLocaleString()}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
             </div>
           </div>
         </CardContent>

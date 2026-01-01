@@ -433,26 +433,26 @@ export function ClientMessaging() {
                   <div
                     key={thread.id}
                     onClick={() => setSelectedThread(thread)}
-                    className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors active:bg-muted"
                   >
-                    <Avatar className="h-12 w-12">
+                    <Avatar className="h-12 w-12 shrink-0">
                       <AvatarFallback className="bg-primary/10 text-primary font-medium">
                         {thread.team_member_name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium truncate">{thread.team_member_name}</h4>
-                        <span className="text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-medium truncate flex-1">{thread.team_member_name}</h4>
+                        <span className="text-xs text-muted-foreground shrink-0">
                           {format(new Date(thread.last_message_time), 'MMM d')}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-sm text-muted-foreground truncate max-w-[200px]">
+                      <div className="flex items-center justify-between mt-1 gap-2">
+                        <p className="text-sm text-muted-foreground truncate flex-1">
                           {thread.last_message}
                         </p>
                         {thread.unread_count > 0 && (
-                          <Badge variant="default" className="h-5 min-w-[20px] justify-center">
+                          <Badge variant="default" className="h-5 min-w-[20px] justify-center shrink-0">
                             {thread.unread_count}
                           </Badge>
                         )}
@@ -542,7 +542,7 @@ export function ClientMessaging() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[400px] p-4">
+        <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] p-4">
           {loadingMessages ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
@@ -581,14 +581,14 @@ export function ClientMessaging() {
                           <Reply className="h-3 w-3" />
                         </Button>
                       )}
-                      <div
-                        className={cn(
-                          "max-w-[80%] rounded-lg p-3 shadow-sm",
-                          isOwn
-                            ? "bg-primary text-primary-foreground rounded-br-sm"
-                            : "bg-muted rounded-bl-sm"
-                        )}
-                      >
+                            <div
+                              className={cn(
+                                "rounded-lg p-3 shadow-sm max-w-[85%]",
+                                isOwn
+                                  ? "bg-primary text-primary-foreground rounded-br-sm"
+                                  : "bg-muted rounded-bl-sm"
+                              )}
+                            >
                         {repliedMessage && (
                           <div className={cn(
                             "text-xs mb-2 p-2 rounded border-l-2",
@@ -602,7 +602,7 @@ export function ClientMessaging() {
                             <p className="truncate">{repliedMessage.content}</p>
                           </div>
                         )}
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                         <div className={cn(
                           "flex items-center gap-1 mt-1",
                           isOwn ? "justify-end" : "justify-start"

@@ -201,11 +201,11 @@ export default function Reports() {
             Business insights and performance metrics
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
           {/* Date Range Filter */}
           <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DateRangePreset)}>
-            <SelectTrigger className="w-[180px]">
-              <CalendarIcon className="h-4 w-4 mr-2" />
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <CalendarIcon className="h-4 w-4 mr-2 shrink-0" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -218,10 +218,10 @@ export default function Reports() {
           </Select>
 
           {datePreset === 'custom' && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-[130px]", !customStartDate && "text-muted-foreground")}>
+                  <Button variant="outline" className={cn("w-full sm:w-[130px] justify-start", !customStartDate && "text-muted-foreground")}>
                     {customStartDate ? format(customStartDate, 'MMM d, yyyy') : 'Start date'}
                   </Button>
                 </PopoverTrigger>
@@ -231,7 +231,7 @@ export default function Reports() {
               </Popover>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-[130px]", !customEndDate && "text-muted-foreground")}>
+                  <Button variant="outline" className={cn("w-full sm:w-[130px] justify-start", !customEndDate && "text-muted-foreground")}>
                     {customEndDate ? format(customEndDate, 'MMM d, yyyy') : 'End date'}
                   </Button>
                 </PopoverTrigger>
@@ -242,7 +242,7 @@ export default function Reports() {
             </div>
           )}
 
-          <Button variant="outline">
+          <Button variant="outline" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
