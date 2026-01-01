@@ -6,14 +6,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function verifyAuth(req: Request, supabase: any) {
+async function verifyAuth(req: Request, supabaseUrl: string, supabaseAnonKey: string) {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
     throw new Error('No authorization header');
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  
+  // Create a client with the user's token to verify their identity
+  const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  });
+  
+  const { data: { user }, error } = await userSupabase.auth.getUser();
   
   if (error || !user) {
     throw new Error('Unauthorized: Invalid token');
@@ -49,10 +57,11 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const user = await verifyAuth(req, supabase);
+    const user = await verifyAuth(req, supabaseUrl, supabaseAnonKey);
     await checkAdminRole(supabase, user.id);
 
     const { message, conversationHistory = [] } = await req.json();

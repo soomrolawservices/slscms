@@ -9,10 +9,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useSignupSettings, useUpdateSignupSetting } from '@/hooks/useSignupSettings';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Settings() {
   const { user, profile, isAdmin } = useAuth();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileName, setProfileName] = useState(profile?.name || '');
+  const [profilePhone, setProfilePhone] = useState(profile?.phone || '');
   const { data: signupSettings, isLoading: signupLoading } = useSignupSettings();
   const updateSignupSetting = useUpdateSignupSetting();
 
@@ -22,6 +26,36 @@ export default function Settings() {
       title: 'Password updated',
       description: 'Your password has been changed successfully.',
     });
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          name: profileName, 
+          phone: profilePhone,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been saved successfully.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error saving profile',
+        description: error.message || 'Failed to save profile',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleDropdownSave = () => {
@@ -69,7 +103,11 @@ export default function Settings() {
               <div className="grid gap-4 max-w-md">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" defaultValue={profile?.name} />
+                  <Input 
+                    id="name" 
+                    value={profileName} 
+                    onChange={(e) => setProfileName(e.target.value)}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
@@ -80,9 +118,16 @@ export default function Settings() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" type="tel" defaultValue={user?.phone} />
+                  <Input 
+                    id="phone" 
+                    type="tel" 
+                    value={profilePhone}
+                    onChange={(e) => setProfilePhone(e.target.value)}
+                  />
                 </div>
-                <Button className="w-fit">Save Changes</Button>
+                <Button className="w-fit" onClick={handleSaveProfile} disabled={isSavingProfile}>
+                  {isSavingProfile ? 'Saving...' : 'Save Changes'}
+                </Button>
               </div>
             </CardContent>
           </Card>
