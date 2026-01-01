@@ -58,14 +58,26 @@ export default function Clients() {
     
     for (const row of data) {
       try {
+        // Normalize client_type - ensure it's one of the valid values
+        let clientType = (row.client_type || 'individual').toLowerCase().trim();
+        if (!['individual', 'corporate', 'government'].includes(clientType)) {
+          clientType = 'individual';
+        }
+        
+        // Normalize status
+        let status = (row.status || 'active').toLowerCase().trim();
+        if (!['active', 'inactive'].includes(status)) {
+          status = 'active';
+        }
+
         await createClient.mutateAsync({
           name: row.name,
-          client_type: row.client_type || 'individual',
+          client_type: clientType,
           phone: row.phone || undefined,
           email: row.email || undefined,
           cnic: row.cnic || undefined,
           region: row.region || undefined,
-          status: row.status || 'active',
+          status: status,
         });
         successCount++;
       } catch (error: any) {

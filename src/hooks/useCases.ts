@@ -38,11 +38,14 @@ export function useCreateCase() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (caseData: { title: string; description?: string; client_id: string }) => {
+    mutationFn: async (caseData: { title: string; description?: string; client_id: string; status?: string }) => {
       const { data, error } = await supabase
         .from('cases')
         .insert({
-          ...caseData,
+          title: caseData.title,
+          description: caseData.description,
+          client_id: caseData.client_id,
+          status: caseData.status || 'active',
           created_by: user?.id,
           assigned_to: user?.id,
         })

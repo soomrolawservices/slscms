@@ -89,10 +89,30 @@ export function BulkImportDialog({ open, onOpenChange, entityType, onImport }: B
       const data: Record<string, string>[] = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim());
+        // Handle CSV values with quotes properly
+        const values: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        const line = lines[i];
+        
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+
         const row: Record<string, string> = {};
         headers.forEach((header, index) => {
-          row[header] = values[index] || '';
+          // Normalize the value - trim and preserve case for values like status, type
+          const rawValue = values[index] || '';
+          row[header] = rawValue.trim();
         });
         data.push(row);
       }
