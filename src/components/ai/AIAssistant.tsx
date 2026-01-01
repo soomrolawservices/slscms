@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Send, Bot, User, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -93,7 +93,7 @@ export function AIAssistant() {
                   key={idx}
                   variant="outline"
                   size="sm"
-                  className="text-xs"
+                  className="text-xs whitespace-normal text-left h-auto py-2"
                   onClick={() => sendMessage(query)}
                 >
                   {query}
@@ -117,13 +117,17 @@ export function AIAssistant() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-lg p-3 ${
+                  className={`max-w-[85%] sm:max-w-[80%] rounded-lg p-3 ${
                     msg.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <MarkdownRenderer 
+                    content={msg.content} 
+                    className="text-sm"
+                    isUserMessage={msg.role === 'user'}
+                  />
                 </div>
                 {msg.role === 'user' && (
                   <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">

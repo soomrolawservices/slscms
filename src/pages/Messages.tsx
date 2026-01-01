@@ -462,7 +462,233 @@ export default function Messages() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Mobile: Show either list or chat */}
+      <div className="lg:hidden">
+        {!selectedThread ? (
+          // Chat List (Mobile)
+          <Card className="border-2 border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MessageSquare className="h-5 w-5" />
+                Chats
+              </CardTitle>
+              <CardDescription>{chatThreads.length} total</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {chatThreads.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No chats yet</p>
+                  <p className="text-sm">Start a new conversation</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {chatThreads.map((thread) => (
+                    <div
+                      key={thread.id}
+                      onClick={() => setSelectedThread(thread)}
+                      className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors active:bg-muted"
+                    >
+                      <Avatar className="h-12 w-12 shrink-0">
+                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                          {thread.participant_name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-sm truncate flex-1">
+                            {thread.participant_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {format(new Date(thread.last_message_time), 'MMM d')}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1 gap-2">
+                          <p className="text-sm text-muted-foreground truncate flex-1">
+                            {thread.last_message}
+                          </p>
+                          {thread.unread_count > 0 && (
+                            <Badge variant="default" className="h-5 min-w-[20px] justify-center shrink-0">
+                              {thread.unread_count}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          // Chat View (Mobile - Full Screen)
+          <Card className="border-2 border-border">
+            <CardHeader className="border-b-2 border-border py-3 px-3">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => setSelectedThread(null)}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                    {selectedThread.participant_name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-base truncate">{selectedThread.participant_name}</CardTitle>
+                  <CardDescription className="text-xs capitalize truncate">
+                    {selectedThread.type}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[calc(100vh-280px)] min-h-[300px] p-4">
+                {loadingMessages ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className={cn("flex", i % 2 === 0 ? "justify-end" : "justify-start")}>
+                        <Skeleton className="h-16 w-3/4 rounded-lg" />
+                      </div>
+                    ))}
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>No messages yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {messages.map((msg) => {
+                      const isOwn = msg.sender_id === user?.id;
+                      const repliedMessage = msg.reply_to_id 
+                        ? messages.find(m => m.id === msg.reply_to_id)
+                        : null;
+                      return (
+                        <div
+                          key={msg.id}
+                          className={cn(
+                            "flex group",
+                            isOwn ? "justify-end" : "justify-start"
+                          )}
+                        >
+                          <div className="flex items-center gap-1 max-w-[85%]">
+                            {!isOwn && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                onClick={() => setReplyingTo(msg)}
+                              >
+                                <Reply className="h-3 w-3" />
+                              </Button>
+                            )}
+                            <div
+                              className={cn(
+                                "rounded-lg p-3 shadow-sm",
+                                isOwn
+                                  ? "bg-primary text-primary-foreground rounded-br-sm"
+                                  : "bg-muted rounded-bl-sm"
+                              )}
+                            >
+                              {repliedMessage && (
+                                <div className={cn(
+                                  "text-xs mb-2 p-2 rounded border-l-2",
+                                  isOwn 
+                                    ? "bg-primary-foreground/10 border-primary-foreground/50" 
+                                    : "bg-background/50 border-primary/50"
+                                )}>
+                                  <p className="font-medium text-[10px] opacity-70">
+                                    {repliedMessage.sender_id === user?.id ? 'You' : selectedThread.participant_name}
+                                  </p>
+                                  <p className="truncate">{repliedMessage.content}</p>
+                                </div>
+                              )}
+                              <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                              <div className={cn(
+                                "flex items-center gap-1 mt-1",
+                                isOwn ? "justify-end" : "justify-start"
+                              )}>
+                                <p className={cn(
+                                  "text-[10px]",
+                                  isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                                )}>
+                                  {format(new Date(msg.created_at), 'h:mm a')}
+                                </p>
+                                {isOwn && (
+                                  msg.is_read ? (
+                                    <CheckCheck className="h-3.5 w-3.5 text-sky-300" />
+                                  ) : (
+                                    <Check className="h-3.5 w-3.5 text-primary-foreground/70" />
+                                  )
+                                )}
+                              </div>
+                            </div>
+                            {isOwn && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                onClick={() => setReplyingTo(msg)}
+                              >
+                                <Reply className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
+              </ScrollArea>
+              <div className="p-3 border-t-2 border-border space-y-2">
+                {replyingTo && (
+                  <div className="flex items-center justify-between bg-muted p-2 rounded-md">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">
+                        Replying to {replyingTo.sender_id === user?.id ? 'yourself' : selectedThread.participant_name}
+                      </p>
+                      <p className="text-sm truncate">{replyingTo.content}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => setReplyingTo(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder={replyingTo ? "Type a reply..." : "Type a message..."}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim()}
+                    size="icon"
+                    className="shrink-0"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Desktop: Side by side layout */}
+      <div className="hidden lg:grid lg:grid-cols-3 gap-6">
         {/* Chat Thread List */}
         <Card className="border-2 border-border lg:col-span-1">
           <CardHeader>
@@ -498,24 +724,24 @@ export default function Messages() {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <span className="font-medium text-sm truncate">
                               {thread.participant_name}
                             </span>
-                            <Badge variant="outline" className="text-[10px] h-4">
+                            <Badge variant="outline" className="text-[10px] h-4 shrink-0">
                               {thread.type}
                             </Badge>
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground shrink-0">
                             {format(new Date(thread.last_message_time), 'MMM d')}
                           </span>
                         </div>
                         <div className="flex items-center justify-between mt-1">
-                          <p className="text-sm text-muted-foreground truncate max-w-[150px]">
+                          <p className="text-sm text-muted-foreground truncate">
                             {thread.last_message}
                           </p>
                           {thread.unread_count > 0 && (
-                            <Badge variant="default" className="h-5 min-w-[20px] justify-center">
+                            <Badge variant="default" className="h-5 min-w-[20px] justify-center shrink-0">
                               {thread.unread_count}
                             </Badge>
                           )}
@@ -542,14 +768,6 @@ export default function Messages() {
             <>
               <CardHeader className="border-b-2 border-border py-3">
                 <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="lg:hidden"
-                    onClick={() => setSelectedThread(null)}
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-primary/10 text-primary font-medium">
                       {selectedThread.participant_name.charAt(0).toUpperCase()}
