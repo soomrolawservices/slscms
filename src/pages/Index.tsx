@@ -54,8 +54,10 @@ export default function Index() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="py-20 lg:py-32">
+      {/* Main Content */}
+      <main>
+        {/* Hero Section */}
+        <section className="py-20 lg:py-32">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
             Legal Practice Management
@@ -178,6 +180,7 @@ export default function Index() {
           </Link>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border py-12">
