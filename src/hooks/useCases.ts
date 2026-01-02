@@ -53,10 +53,22 @@ export function useCreateCase() {
         .single();
 
       if (error) throw error;
+
+      // Auto-log case creation activity
+      await supabase.from('case_activities').insert({
+        case_id: data.id,
+        activity_type: 'created',
+        title: 'Case created',
+        description: `New case "${caseData.title}" has been created`,
+        user_id: user?.id,
+        metadata: { initial_status: caseData.status || 'active' }
+      });
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cases'] });
+      queryClient.invalidateQueries({ queryKey: ['case_activities'] });
       toast({ title: 'Case created successfully' });
     },
     onError: (error: Error) => {
@@ -67,9 +79,17 @@ export function useCreateCase() {
 
 export function useUpdateCase() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<CaseData> & { id: string }) => {
+      // Get the current case to check for changes
+      const { data: currentCase } = await supabase
+        .from('cases')
+        .select('status, assigned_to')
+        .eq('id', id)
+        .single();
+
       const { data, error } = await supabase
         .from('cases')
         .update(updates)
@@ -78,10 +98,36 @@ export function useUpdateCase() {
         .single();
 
       if (error) throw error;
+
+      // Log status change activity
+      if (currentCase && updates.status && currentCase.status !== updates.status) {
+        await supabase.from('case_activities').insert({
+          case_id: id,
+          activity_type: 'status_change',
+          title: `Status changed to ${updates.status}`,
+          description: `Case status updated from "${currentCase.status}" to "${updates.status}"`,
+          user_id: user?.id,
+          metadata: { old_status: currentCase.status, new_status: updates.status }
+        });
+      }
+
+      // Log assignment change activity
+      if (currentCase && updates.assigned_to && currentCase.assigned_to !== updates.assigned_to) {
+        await supabase.from('case_activities').insert({
+          case_id: id,
+          activity_type: 'assignment',
+          title: 'Case reassigned',
+          description: 'Case has been assigned to a new team member',
+          user_id: user?.id,
+          metadata: { new_assignee: updates.assigned_to }
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cases'] });
+      queryClient.invalidateQueries({ queryKey: ['case_activities'] });
       toast({ title: 'Case updated successfully' });
     },
     onError: (error: Error) => {

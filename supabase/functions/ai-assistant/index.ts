@@ -103,9 +103,9 @@ serve(async (req) => {
     const itrReturns = itrReturnsRes.data || [];
 
     // Calculate comprehensive metrics
-    // Revenue metrics
+    // Revenue metrics - payments use "completed" status, not "paid"
     const totalPaidRevenue = payments
-      .filter(p => p.status === "paid")
+      .filter(p => p.status === "completed")
       .reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
     
     const pendingPayments = payments
@@ -168,7 +168,7 @@ serve(async (req) => {
     
     const thisMonthPayments = payments.filter(p => {
       const date = new Date(p.created_at);
-      return date.getMonth() === thisMonth && date.getFullYear() === thisYear && p.status === "paid";
+      return date.getMonth() === thisMonth && date.getFullYear() === thisYear && p.status === "completed";
     }).reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
 
     const thisMonthExpenses = approvedExpenses.filter(e => {
@@ -228,8 +228,9 @@ ${Object.entries(expensesByType).map(([type, amount]) => `  - ${type}: PKR ${amo
 
 💵 PAYMENTS:
 - Total Payments: ${payments.length}
-- Paid: ${payments.filter(p => p.status === "paid").length}
+- Completed: ${payments.filter(p => p.status === "completed").length}
 - Pending: ${payments.filter(p => p.status === "pending").length}
+- Total Completed Amount: PKR ${totalPaidRevenue.toLocaleString()}
 
 📄 DOCUMENTS:
 - Total Documents: ${documents.length}

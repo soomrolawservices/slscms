@@ -12,6 +12,7 @@ import { useAppointments } from '@/hooks/useAppointments';
 import { usePayments } from '@/hooks/usePayments';
 import { AIAnalytics } from '@/components/dashboard/AIAnalytics';
 import { AIAssistant } from '@/components/ai/AIAssistant';
+import { ExpenseBreakdownChart } from '@/components/dashboard/ExpenseBreakdownChart';
 import { useState } from 'react';
 
 export default function Dashboard() {
@@ -252,35 +253,41 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Activity Summary Card */}
-      <Card className="border-0 shadow-md overflow-hidden">
-        <CardHeader className="border-b border-border/50 bg-gradient-to-r from-card to-muted/20">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <span className="w-1.5 h-6 bg-gradient-to-b from-purple-500 to-violet-600 rounded-full" />
-            {isAdmin ? 'System Overview' : 'My Overview'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-5">
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 text-center">
-              <p className="text-xl sm:text-2xl font-bold text-primary">{totalClients}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Total Clients</p>
+      {/* Expense Breakdown & Activity Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Expense Breakdown Chart */}
+        {isAdmin && <ExpenseBreakdownChart />}
+
+        {/* Activity Summary Card */}
+        <Card className="border-0 shadow-md overflow-hidden">
+          <CardHeader className="border-b border-border/50 bg-gradient-to-r from-card to-muted/20">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <span className="w-1.5 h-6 bg-gradient-to-b from-purple-500 to-violet-600 rounded-full" />
+              {isAdmin ? 'System Overview' : 'My Overview'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-5">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-primary">{totalClients}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Clients</p>
+              </div>
+              <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600">{activeCases}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Active Cases</p>
+              </div>
+              <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-amber-600">{scheduledAppointments}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Scheduled</p>
+              </div>
+              <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-rose-500/10 to-red-500/5 text-center">
+                <p className="text-lg sm:text-2xl font-bold text-rose-600 break-all">PKR {pendingPayments.toLocaleString()}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
+              </div>
             </div>
-            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-green-500/5 text-center">
-              <p className="text-xl sm:text-2xl font-bold text-emerald-600">{activeCases}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Active Cases</p>
-            </div>
-            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 text-center">
-              <p className="text-xl sm:text-2xl font-bold text-amber-600">{scheduledAppointments}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Scheduled</p>
-            </div>
-            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-rose-500/10 to-red-500/5 text-center">
-              <p className="text-lg sm:text-2xl font-bold text-rose-600 break-all">PKR {pendingPayments.toLocaleString()}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

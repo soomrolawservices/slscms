@@ -79,10 +79,24 @@ export function useUploadDocument() {
         .single();
 
       if (error) throw error;
+
+      // Auto-log document upload activity for the case
+      if (case_id) {
+        await supabase.from('case_activities').insert({
+          case_id,
+          activity_type: 'document',
+          title: 'Document uploaded',
+          description: `"${title}" has been uploaded to this case`,
+          user_id: user?.id,
+          metadata: { document_id: data.id, document_type: document_type || fileExt?.toUpperCase(), file_size: file.size }
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
+      queryClient.invalidateQueries({ queryKey: ['case_activities'] });
       toast({ title: 'Document uploaded successfully' });
     },
     onError: (error: Error) => {

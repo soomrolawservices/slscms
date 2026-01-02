@@ -9,6 +9,7 @@ export interface ExpenseData {
   amount: number;
   date: string;
   category: string | null;
+  expense_type: string | null;
   status: string;
   receipt_path: string | null;
   created_by: string | null;
