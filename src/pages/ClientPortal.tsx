@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ClientAppointmentBooking } from '@/components/portal/ClientAppointmentBooking';
 import { ClientMessaging } from '@/components/portal/ClientMessaging';
+import { ClientCaseTimeline } from '@/components/cases/ClientCaseTimeline';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -312,13 +313,20 @@ export default function ClientPortal() {
         </TabsList>
 
         <TabsContent value="cases" className="mt-4">
-          <DataTable
-            data={cases}
-            columns={caseColumns}
-            searchPlaceholder="Search cases..."
-            searchKey="title"
-            title="Your Cases"
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5" />
+                Your Cases & Activity Timeline
+              </CardTitle>
+              <CardDescription>
+                Click on a case to view its detailed activity history
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ClientCaseTimeline cases={cases} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">
