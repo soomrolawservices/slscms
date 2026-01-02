@@ -115,6 +115,47 @@ export type Database = {
           },
         ]
       }
+      case_activities: {
+        Row: {
+          activity_type: string
+          case_id: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          case_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          case_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_activities_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
           assigned_to: string | null
@@ -433,6 +474,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           date: string
+          expense_type: string | null
           id: string
           receipt_path: string | null
           status: string
@@ -445,6 +487,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date: string
+          expense_type?: string | null
           id?: string
           receipt_path?: string | null
           status?: string
@@ -457,6 +500,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string
+          expense_type?: string | null
           id?: string
           receipt_path?: string | null
           status?: string

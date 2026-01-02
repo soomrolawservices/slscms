@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload, Clock, MessageSquarePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -28,6 +29,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { BulkAssignment } from '@/components/assignments/BulkAssignment';
 import { BulkImportDialog } from '@/components/bulk-import/BulkImportDialog';
+import { CaseTimeline } from '@/components/cases/CaseTimeline';
+import { AddCaseActivityForm } from '@/components/cases/AddCaseActivityForm';
+import { useLogCaseActivity } from '@/hooks/useCaseActivities';
 import { format } from 'date-fns';
 
 interface CaseWithClient {
@@ -59,6 +63,9 @@ export default function Cases() {
   const [selectedCase, setSelectedCase] = useState<CaseWithClient | null>(null);
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false);
+  const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
+  const { logActivity } = useLogCaseActivity();
 
   const handleBulkImport = async (data: Record<string, string>[]) => {
     let successCount = 0;
@@ -267,6 +274,15 @@ export default function Cases() {
                     <Eye className="h-4 w-4 mr-2" />
                     View
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSelectedCase(row); setIsTimelineOpen(true); }}>
+                    <Clock className="h-4 w-4 mr-2" />
+                    Timeline
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSelectedCase(row); setIsAddActivityOpen(true); }}>
+                    <MessageSquarePlus className="h-4 w-4 mr-2" />
+                    Add Activity
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleEdit(row)}>
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
@@ -459,6 +475,37 @@ export default function Cases() {
         onConfirm={handleDelete}
         variant="destructive"
       />
+
+      {/* Timeline Modal */}
+      <Dialog open={isTimelineOpen} onOpenChange={setIsTimelineOpen}>
+        <DialogContent className="border-2 border-border max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Case Timeline</DialogTitle>
+            <DialogDescription>
+              Activity history for: {selectedCase?.title}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCase && <CaseTimeline caseId={selectedCase.id} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Activity Modal */}
+      <Dialog open={isAddActivityOpen} onOpenChange={setIsAddActivityOpen}>
+        <DialogContent className="border-2 border-border">
+          <DialogHeader>
+            <DialogTitle>Add Activity</DialogTitle>
+            <DialogDescription>
+              Log a new activity for: {selectedCase?.title}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCase && (
+            <AddCaseActivityForm 
+              caseId={selectedCase.id} 
+              onSuccess={() => setIsAddActivityOpen(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
