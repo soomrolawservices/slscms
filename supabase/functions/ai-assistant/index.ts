@@ -14,7 +14,6 @@ async function verifyAuth(req: Request, supabaseUrl: string, supabaseAnonKey: st
 
   const token = authHeader.replace('Bearer ', '');
   
-  // Create a client with the user's token to verify their identity
   const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: {
       headers: { Authorization: `Bearer ${token}` }
@@ -70,13 +69,27 @@ serve(async (req) => {
       throw new Error("Message is required");
     }
 
-    // Fetch current business data for context
-    const [clientsRes, casesRes, paymentsRes, invoicesRes, appointmentsRes] = await Promise.all([
+    // Fetch ALL business data for comprehensive context
+    const [
+      clientsRes,
+      casesRes,
+      paymentsRes,
+      invoicesRes,
+      appointmentsRes,
+      expensesRes,
+      documentsRes,
+      profilesRes,
+      itrReturnsRes,
+    ] = await Promise.all([
       supabase.from("clients").select("*"),
       supabase.from("cases").select("*"),
       supabase.from("payments").select("*"),
-      supabase.from("invoices").select("*"),
+      supabase.from("invoices").select("*, invoice_line_items(*)"),
       supabase.from("appointments").select("*"),
+      supabase.from("expenses").select("*"),
+      supabase.from("documents").select("*"),
+      supabase.from("profiles").select("*"),
+      supabase.from("itr_returns").select("*"),
     ]);
 
     const clients = clientsRes.data || [];
@@ -84,45 +97,181 @@ serve(async (req) => {
     const payments = paymentsRes.data || [];
     const invoices = invoicesRes.data || [];
     const appointments = appointmentsRes.data || [];
+    const expenses = expensesRes.data || [];
+    const documents = documentsRes.data || [];
+    const profiles = profilesRes.data || [];
+    const itrReturns = itrReturnsRes.data || [];
 
-    // Calculate metrics
-    const totalRevenue = payments.filter(p => p.status === "paid").reduce((acc, p) => acc + (p.amount || 0), 0);
-    const pendingPayments = payments.filter(p => p.status === "pending").reduce((acc, p) => acc + (p.amount || 0), 0);
+    // Calculate comprehensive metrics
+    // Revenue metrics
+    const totalPaidRevenue = payments
+      .filter(p => p.status === "paid")
+      .reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+    
+    const pendingPayments = payments
+      .filter(p => p.status === "pending")
+      .reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+
+    const totalInvoiceAmount = invoices.reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+    const paidInvoiceAmount = invoices
+      .filter(i => i.status === "paid")
+      .reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+    const unpaidInvoiceAmount = invoices
+      .filter(i => i.status === "unpaid" || i.status === "overdue")
+      .reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+
+    // Case metrics
     const activeCases = cases.filter(c => c.status === "active" || c.status === "in_progress").length;
     const pendingCases = cases.filter(c => c.status === "pending").length;
+    const closedCases = cases.filter(c => c.status === "closed" || c.status === "archived").length;
+
+    // Client metrics
+    const activeClients = clients.filter(c => c.status === "active").length;
+    const individualClients = clients.filter(c => c.client_type === "individual").length;
+    const businessClients = clients.filter(c => c.client_type === "business").length;
+
+    // Expense metrics by type
+    const approvedExpenses = expenses.filter(e => e.status === "approved");
+    const totalExpenses = approvedExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+    
+    const expensesByType: Record<string, number> = {};
+    approvedExpenses.forEach(e => {
+      const type = e.expense_type || e.category || 'general';
+      expensesByType[type] = (expensesByType[type] || 0) + (Number(e.amount) || 0);
+    });
+
+    // Appointment metrics
+    const scheduledAppointments = appointments.filter(a => a.status === "scheduled").length;
+    const completedAppointments = appointments.filter(a => a.status === "completed").length;
+    const cancelledAppointments = appointments.filter(a => a.status === "cancelled").length;
+
+    // Team metrics
+    const activeTeamMembers = profiles.filter(p => p.status === "active").length;
+    const pendingTeamMembers = profiles.filter(p => p.status === "pending").length;
+
+    // ITR metrics
+    const completedITR = itrReturns.filter(r => r.progress === "completed").length;
+    const pendingITR = itrReturns.filter(r => r.progress === "pending" || r.progress === "in_progress").length;
+    const itrRevenue = itrReturns
+      .filter(r => r.payment_status === "paid")
+      .reduce((acc, r) => acc + (Number(r.payment_amount) || 0), 0);
+
+    // Collection rate
     const collectionRate = invoices.length > 0 
       ? ((invoices.filter(i => i.status === "paid").length / invoices.length) * 100).toFixed(1) 
       : 0;
 
+    // Time-based analysis
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+    
+    const thisMonthPayments = payments.filter(p => {
+      const date = new Date(p.created_at);
+      return date.getMonth() === thisMonth && date.getFullYear() === thisYear && p.status === "paid";
+    }).reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+
+    const thisMonthExpenses = approvedExpenses.filter(e => {
+      const date = new Date(e.date);
+      return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
+    }).reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+
+    // Net profit calculation
+    const netProfit = totalPaidRevenue - totalExpenses;
+    const profitMargin = totalPaidRevenue > 0 ? ((netProfit / totalPaidRevenue) * 100).toFixed(1) : 0;
+
     const businessContext = `
-Current Business Data:
-- Total Clients: ${clients.length} (Active: ${clients.filter(c => c.status === "active").length})
-- Total Cases: ${cases.length} (Active: ${activeCases}, Pending: ${pendingCases})
-- Total Revenue (Paid): PKR ${totalRevenue.toLocaleString()}
+=== SOOMRO LAW SERVICES - COMPLETE BUSINESS DATA ===
+
+📊 FINANCIAL OVERVIEW:
+- Total Historical Revenue (Paid Payments): PKR ${totalPaidRevenue.toLocaleString()}
+- Total Invoice Amount (All Time): PKR ${totalInvoiceAmount.toLocaleString()}
+- Paid Invoices: PKR ${paidInvoiceAmount.toLocaleString()}
+- Unpaid/Overdue Invoices: PKR ${unpaidInvoiceAmount.toLocaleString()}
 - Pending Payments: PKR ${pendingPayments.toLocaleString()}
+- This Month Revenue: PKR ${thisMonthPayments.toLocaleString()}
 - Invoice Collection Rate: ${collectionRate}%
-- Upcoming Appointments: ${appointments.filter(a => a.status === "scheduled").length}
+
+💰 EXPENSES & PROFITABILITY:
+- Total Operating Expenses: PKR ${totalExpenses.toLocaleString()}
+- This Month Expenses: PKR ${thisMonthExpenses.toLocaleString()}
+- Net Profit (Revenue - Expenses): PKR ${netProfit.toLocaleString()}
+- Profit Margin: ${profitMargin}%
+
+📂 EXPENSE BREAKDOWN:
+${Object.entries(expensesByType).map(([type, amount]) => `  - ${type}: PKR ${amount.toLocaleString()}`).join('\n')}
+
+👥 CLIENTS:
+- Total Clients: ${clients.length}
+- Active Clients: ${activeClients}
+- Individual Clients: ${individualClients}
+- Business Clients: ${businessClients}
+
+📁 CASES:
+- Total Cases: ${cases.length}
+- Active Cases: ${activeCases}
+- Pending Cases: ${pendingCases}
+- Closed/Archived: ${closedCases}
 - Cases by Status: ${JSON.stringify(cases.reduce((acc: any, c) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {}))}
+
+📅 APPOINTMENTS:
+- Total Appointments: ${appointments.length}
+- Scheduled (Upcoming): ${scheduledAppointments}
+- Completed: ${completedAppointments}
+- Cancelled: ${cancelledAppointments}
+
+📑 INVOICES:
+- Total Invoices: ${invoices.length}
+- Paid: ${invoices.filter(i => i.status === "paid").length}
+- Unpaid: ${invoices.filter(i => i.status === "unpaid").length}
+- Overdue: ${invoices.filter(i => i.status === "overdue").length}
+
+💵 PAYMENTS:
+- Total Payments: ${payments.length}
+- Paid: ${payments.filter(p => p.status === "paid").length}
+- Pending: ${payments.filter(p => p.status === "pending").length}
+
+📄 DOCUMENTS:
+- Total Documents: ${documents.length}
+
+👨‍💼 TEAM:
+- Active Team Members: ${activeTeamMembers}
+- Pending Approvals: ${pendingTeamMembers}
+
+📋 ITR (Tax Returns):
+- Total ITR Returns: ${itrReturns.length}
+- Completed: ${completedITR}
+- In Progress/Pending: ${pendingITR}
+- ITR Revenue Collected: PKR ${itrRevenue.toLocaleString()}
 `;
 
     const messages = [
       {
         role: "system",
-        content: `You are an expert legal practice management AI assistant for Soomro Law Services. 
-You help administrators make strategic decisions about their law practice.
-You have access to real-time business data and can provide:
-1. Strategic insights and recommendations
-2. Financial analysis and projections
-3. Case management advice
-4. Client relationship suggestions
-5. Resource allocation recommendations
+        content: `You are an expert legal practice management AI assistant for Soomro Law Services, a law firm based in Pakistan. 
+You have FULL ACCESS to all business data and can provide comprehensive insights.
 
-Current Business Context:
+Your capabilities:
+1. Financial Analysis - Revenue, expenses, profitability, cash flow analysis
+2. Case Management - Track case status, workload, efficiency metrics
+3. Client Analytics - Client acquisition, retention, value analysis
+4. Expense Tracking - Operating costs, budget analysis, cost optimization
+5. Team Performance - Workload distribution, productivity insights
+6. Business Intelligence - Trends, forecasts, strategic recommendations
+7. ITR/Tax Services - Tax return tracking, compliance status
+
+CURRENT BUSINESS DATA:
 ${businessContext}
 
-Always be professional, concise, and provide actionable insights. 
-When suggesting improvements, be specific and explain the expected impact.
-Use PKR for currency values.`,
+IMPORTANT GUIDELINES:
+- Always use PKR for currency values
+- Be specific with numbers and percentages
+- Provide actionable insights and recommendations
+- Reference actual data when answering questions
+- When comparing periods, use available data
+- For revenue questions, use the Total Historical Revenue figure
+- For profit analysis, use Net Profit and Profit Margin
+- Explain calculations when providing financial insights`,
       },
       ...conversationHistory.map((msg: any) => ({
         role: msg.role,
