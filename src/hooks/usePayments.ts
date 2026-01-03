@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { notifyTeamMembersForClient, notifyClientUser } from './useNotificationService';
 
 export interface PaymentData {
   id: string;
@@ -36,7 +37,7 @@ export function usePayments() {
 
 export function useCreatePayment() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   return useMutation({
     mutationFn: async (data: { title: string; amount: number; client_id: string; case_id?: string; payment_date?: string; status?: string }) => {
@@ -55,11 +56,34 @@ export function useCreatePayment() {
         .single();
 
       if (error) throw error;
-      return result;
+      return { ...result, client_id: data.client_id };
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       toast({ title: 'Payment recorded successfully' });
+
+      const formattedAmount = `PKR ${Number(data.amount).toLocaleString()}`;
+
+      // Notify team members
+      await notifyTeamMembersForClient(
+        data.client_id,
+        'Payment Recorded',
+        `Payment of ${formattedAmount} recorded: "${data.title}" by ${profile?.name || 'a team member'}`,
+        'success',
+        'payment',
+        data.id,
+        user?.id
+      );
+
+      // Notify client
+      await notifyClientUser(
+        data.client_id,
+        'Payment Recorded',
+        `A payment of ${formattedAmount} has been recorded for "${data.title}"`,
+        'success',
+        'payment',
+        data.id
+      );
     },
     onError: (error: Error) => {
       toast({ title: 'Error recording payment', description: error.message, variant: 'destructive' });

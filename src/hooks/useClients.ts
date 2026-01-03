@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { notifyAdmins } from './useNotificationService';
 
 export interface ClientData {
   id: string;
@@ -37,7 +38,7 @@ export function useClients() {
 
 export function useCreateClient() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   return useMutation({
     mutationFn: async (clientData: Omit<ClientData, 'id' | 'created_at' | 'created_by' | 'assigned_to'>) => {
@@ -54,9 +55,18 @@ export function useCreateClient() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast({ title: 'Client created successfully' });
+      
+      // Notify admins about new client
+      await notifyAdmins(
+        'New Client Added',
+        `Client "${data.name}" has been added by ${profile?.name || 'a team member'}`,
+        'success',
+        'client',
+        data.id
+      );
     },
     onError: (error: Error) => {
       toast({ title: 'Error creating client', description: error.message, variant: 'destructive' });

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { notifyTeamMembersForClient, notifyClientUser } from './useNotificationService';
 
 export interface DocumentData {
   id: string;
@@ -37,7 +38,7 @@ export function useDocuments() {
 
 export function useUploadDocument() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   return useMutation({
     mutationFn: async ({ 
@@ -92,12 +93,35 @@ export function useUploadDocument() {
         });
       }
 
-      return data;
+      return { ...data, client_id };
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       queryClient.invalidateQueries({ queryKey: ['case_activities'] });
       toast({ title: 'Document uploaded successfully' });
+
+      // Notify team members
+      if (data.client_id) {
+        await notifyTeamMembersForClient(
+          data.client_id,
+          'Document Uploaded',
+          `Document "${data.title}" has been uploaded by ${profile?.name || 'a team member'}`,
+          'info',
+          'document',
+          data.id,
+          user?.id
+        );
+
+        // Notify the client
+        await notifyClientUser(
+          data.client_id,
+          'New Document Available',
+          `A new document "${data.title}" has been uploaded for you`,
+          'info',
+          'document',
+          data.id
+        );
+      }
     },
     onError: (error: Error) => {
       toast({ title: 'Error uploading document', description: error.message, variant: 'destructive' });

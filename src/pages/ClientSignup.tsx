@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { useSignupSettings } from '@/hooks/useSignupSettings';
+import { notifyAdmins } from '@/hooks/useNotificationService';
 
 export default function ClientSignup() {
   const [formData, setFormData] = useState({
@@ -86,6 +87,14 @@ export default function ClientSignup() {
         });
         return;
       }
+
+      // Notify admins about new client registration
+      await notifyAdmins(
+        'New Client Registration',
+        `${formData.firstName} ${formData.lastName} (${formData.email}) has registered as a client and is awaiting approval`,
+        'warning',
+        'user'
+      );
 
       setIsSubmitted(true);
       toast({
