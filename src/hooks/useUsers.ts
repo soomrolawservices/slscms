@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
+import { notifyAdmins, notifyUser } from './useNotificationService';
 
 type UserStatus = Database['public']['Enums']['user_status'];
 type AppRole = Database['public']['Enums']['app_role'];
@@ -57,9 +58,10 @@ export function useUsers() {
 
 export function useUpdateUserStatus() {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ userId, status }: { userId: string; status: UserStatus }) => {
+    mutationFn: async ({ userId, status, userName }: { userId: string; status: UserStatus; userName?: string }) => {
       const { data, error } = await supabase
         .from('profiles')
         .update({ status })
@@ -68,9 +70,9 @@ export function useUpdateUserStatus() {
         .single();
 
       if (error) throw error;
-      return data;
+      return { ...data, userName };
     },
-    onSuccess: (_, { status }) => {
+    onSuccess: async (data, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       const statusMessages: Record<UserStatus, string> = {
         active: 'User has been approved',
@@ -78,6 +80,23 @@ export function useUpdateUserStatus() {
         pending: 'User status set to pending',
       };
       toast({ title: statusMessages[status] });
+
+      // Notify the user about their status change
+      if (status === 'active') {
+        await notifyUser(
+          data.id,
+          'Account Approved',
+          'Your account has been approved. You now have full access to the system.',
+          'success'
+        );
+      } else if (status === 'blocked') {
+        await notifyUser(
+          data.id,
+          'Account Blocked',
+          'Your account has been blocked. Please contact support for assistance.',
+          'error'
+        );
+      }
     },
     onError: (error: Error) => {
       toast({ title: 'Error updating user status', description: error.message, variant: 'destructive' });

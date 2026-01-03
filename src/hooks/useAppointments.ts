@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { notifyAdmins, notifyTeamMembersForClient, notifyClientUser, notifyUser } from './useNotificationService';
+import { format } from 'date-fns';
 
 export interface AppointmentData {
   id: string;
@@ -43,7 +45,7 @@ export function useAppointments() {
 
 export function useCreateAppointment() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   return useMutation({
     mutationFn: async (data: Omit<AppointmentData, 'id' | 'created_at' | 'created_by' | 'assigned_to'>) => {
@@ -60,9 +62,32 @@ export function useCreateAppointment() {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({ title: 'Appointment scheduled successfully' });
+
+      const appointmentDate = format(new Date(data.date), 'MMM d, yyyy');
+
+      // Notify admins
+      await notifyAdmins(
+        'New Appointment Scheduled',
+        `Appointment "${data.topic}" scheduled for ${appointmentDate} at ${data.time} by ${profile?.name || 'a team member'}`,
+        'info',
+        'appointment',
+        data.id
+      );
+
+      // Notify client if linked
+      if (data.client_id) {
+        await notifyClientUser(
+          data.client_id,
+          'Appointment Scheduled',
+          `Your appointment "${data.topic}" has been scheduled for ${appointmentDate} at ${data.time}`,
+          'success',
+          'appointment',
+          data.id
+        );
+      }
     },
     onError: (error: Error) => {
       toast({ title: 'Error scheduling appointment', description: error.message, variant: 'destructive' });

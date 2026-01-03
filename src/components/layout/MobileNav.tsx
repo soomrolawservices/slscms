@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavPreferences, ALL_NAV_ITEMS } from '@/hooks/useNavPreferences';
 import { NavCustomizer } from './NavCustomizer';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 // Icon mapping for dynamic rendering
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -84,20 +85,21 @@ export function MobileNav() {
   if (isLoading) {
     return (
       <>
-        <header className="lg:hidden flex items-center justify-center p-4 border-b border-border bg-card/95 backdrop-blur-sm sticky top-0 z-40 shadow-sm">
+        <header className="lg:hidden flex items-center justify-between p-3 border-b border-border bg-card/95 backdrop-blur-sm sticky top-0 z-40 shadow-sm">
           <div className="flex items-center gap-2">
-            <img src="/soomro-law-logo.png" alt="Soomro Law Services" className="w-8 h-8 object-contain" />
-            <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Soomro Law Services CMS
+            <img src="/soomro-law-logo.png" alt="Soomro Law Services" className="w-7 h-7 object-contain" />
+            <h1 className="text-sm font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              SLS CMS
             </h1>
           </div>
+          <div className="w-9 h-9 rounded-lg bg-muted/50 animate-pulse" />
         </header>
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-40 safe-area-inset-bottom">
           <div className="flex items-center justify-around py-1">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex flex-col items-center gap-0.5 px-3 py-2 flex-1">
-                <div className="p-1.5 rounded-xl bg-muted/50 w-8 h-8 animate-pulse" />
-                <div className="w-8 h-2 bg-muted/50 rounded animate-pulse" />
+              <div key={i} className="flex flex-col items-center gap-0.5 px-2 py-2 flex-1">
+                <div className="p-1.5 rounded-xl bg-muted/50 w-7 h-7 animate-pulse" />
+                <div className="w-6 h-1.5 bg-muted/50 rounded animate-pulse" />
               </div>
             ))}
           </div>
@@ -108,19 +110,20 @@ export function MobileNav() {
 
   return (
     <>
-      {/* Top Header - Mobile - Simplified without hamburger */}
-      <header className="lg:hidden flex items-center justify-center p-4 border-b border-border bg-card/95 backdrop-blur-sm sticky top-0 z-40 shadow-sm">
+      {/* Top Header - Mobile - With Notifications */}
+      <header className="lg:hidden flex items-center justify-between p-3 border-b border-border bg-card/95 backdrop-blur-sm sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
-          <img src="/soomro-law-logo.png" alt="Soomro Law Services" className="w-8 h-8 object-contain" />
-          <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Soomro Law Services CMS
+          <img src="/soomro-law-logo.png" alt="Soomro Law Services" className="w-7 h-7 object-contain" />
+          <h1 className="text-sm font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            SLS CMS
           </h1>
         </div>
+        <NotificationBell />
       </header>
 
-      {/* Bottom Navigation - Android-style System Tray */}
+      {/* Bottom Navigation - Compact Android-style */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-40 safe-area-inset-bottom">
-        <div className="flex items-center justify-around py-1">
+        <div className="flex items-center justify-around py-0.5">
           {/* Dynamic tabs from user preferences */}
           {visibleTabs.map((item) => (
             <NavLink
@@ -128,7 +131,7 @@ export function MobileNav() {
               to={item.url}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium transition-all flex-1",
+                  "flex flex-col items-center gap-0.5 px-1.5 py-1.5 text-xs font-medium transition-all flex-1 min-w-0",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -138,17 +141,14 @@ export function MobileNav() {
               {({ isActive }) => (
                 <>
                   <div className={cn(
-                    "p-1.5 rounded-xl transition-all",
+                    "p-1 rounded-lg transition-all",
                     isActive 
-                      ? "bg-primary/15 text-primary shadow-sm" 
-                      : "bg-transparent hover:bg-muted/50"
+                      ? "bg-primary/15 text-primary" 
+                      : "bg-transparent"
                   )}>
-                    {renderIcon(item.icon, 'h-5 w-5')}
+                    {renderIcon(item.icon, 'h-4 w-4')}
                   </div>
-                  <span className="text-[10px]">{item.title}</span>
-                  {isActive && (
-                    <div className="w-1 h-1 rounded-full bg-primary" />
-                  )}
+                  <span className="text-[9px] truncate max-w-[48px]">{item.title}</span>
                 </>
               )}
             </NavLink>
@@ -158,15 +158,15 @@ export function MobileNav() {
           <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
             <DrawerTrigger asChild>
               <button
-                className="flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-primary transition-colors flex-1"
+                className="flex flex-col items-center gap-0.5 px-1.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-primary transition-colors flex-1 min-w-0"
               >
-                <div className="p-1.5 rounded-xl bg-muted/50 hover:bg-primary/10 transition-colors">
-                  <MoreHorizontal className="h-5 w-5" />
+                <div className="p-1 rounded-lg bg-muted/50">
+                  <MoreHorizontal className="h-4 w-4" />
                 </div>
-                <span className="text-[10px]">More</span>
+                <span className="text-[9px]">More</span>
               </button>
             </DrawerTrigger>
-            <DrawerContent className="max-h-[85vh] bg-card border-t-2 border-primary/20">
+            <DrawerContent className="max-h-[80vh] bg-card border-t-2 border-primary/20">
               <div className="p-4 pb-8 overflow-y-auto">
                 {/* Drag handle */}
                 <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-6" />

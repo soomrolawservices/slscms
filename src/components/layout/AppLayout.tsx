@@ -24,13 +24,13 @@ export function AppLayout() {
     <div className="flex min-h-screen w-full bg-background">
       <SkipToMain />
       <AppSidebar />
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen w-full overflow-x-hidden">
         <MobileNav />
         {/* Desktop Header */}
         <header className="hidden lg:flex items-center justify-end gap-4 p-4 border-b-2 border-border">
           <NotificationBell />
         </header>
-        <main id="main-content" className="flex-1 p-4 lg:p-6 pb-20 lg:pb-6 overflow-auto">
+        <main id="main-content" className="flex-1 p-3 sm:p-4 lg:p-6 pb-24 lg:pb-6 overflow-x-hidden">
           <Outlet />
         </main>
       </div>

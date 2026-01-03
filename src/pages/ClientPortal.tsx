@@ -225,92 +225,96 @@ export default function ClientPortal() {
   const formatCurrency = (amount: number) => `PKR ${amount.toLocaleString()}`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#006A4E] to-[#00857C] flex items-center justify-center shadow">
-              <span className="text-sm font-bold text-white">SL</span>
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-[#006A4E] to-[#00857C] flex items-center justify-center shadow">
+              <span className="text-xs sm:text-sm font-bold text-white">SL</span>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Soomro Law Services</p>
-              <p className="text-xs text-muted-foreground italic">Just Relax! You are in Safe Hands.</p>
+              <p className="text-xs sm:text-sm text-muted-foreground font-medium">Soomro Law Services</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground italic hidden sm:block">Just Relax! You are in Safe Hands.</p>
             </div>
           </div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Welcome, {profile?.name || client?.name}</h1>
-          <p className="text-muted-foreground">View your cases, documents, and financial information</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">Welcome, {profile?.name || client?.name}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">View your cases, documents, and financial information</p>
         </div>
-        <Button variant="outline" onClick={handleLogout}>
+        <Button variant="outline" onClick={handleLogout} size="sm" className="w-fit">
           <LogOut className="h-4 w-4 mr-2" />
           Sign Out
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-2 border-border">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
-              Active Cases
+      {/* Summary Cards - 2x2 grid on mobile */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <Card className="border border-border">
+          <CardHeader className="pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardDescription className="flex items-center gap-1 sm:gap-2 text-xs">
+              <Briefcase className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="truncate">Active Cases</span>
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{cases.filter(c => c.status === 'active').length}</p>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+            <p className="text-xl sm:text-2xl font-bold">{cases.filter(c => c.status === 'active').length}</p>
           </CardContent>
         </Card>
-        <Card className="border-2 border-border">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Documents
+        <Card className="border border-border">
+          <CardHeader className="pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardDescription className="flex items-center gap-1 sm:gap-2 text-xs">
+              <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="truncate">Documents</span>
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{documents.length}</p>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+            <p className="text-xl sm:text-2xl font-bold">{documents.length}</p>
           </CardContent>
         </Card>
-        <Card className="border-2 border-border">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Total Paid
+        <Card className="border border-border">
+          <CardHeader className="pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardDescription className="flex items-center gap-1 sm:gap-2 text-xs">
+              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="truncate">Total Paid</span>
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</p>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+            <p className="text-lg sm:text-2xl font-bold text-green-600 truncate">{formatCurrency(totalPaid)}</p>
           </CardContent>
         </Card>
-        <Card className="border-2 border-border">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Receipt className="h-4 w-4" />
-              Pending Invoices
+        <Card className="border border-border">
+          <CardHeader className="pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardDescription className="flex items-center gap-1 sm:gap-2 text-xs">
+              <Receipt className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="truncate">Pending</span>
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-yellow-600">{formatCurrency(pendingInvoices)}</p>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+            <p className="text-lg sm:text-2xl font-bold text-yellow-600 truncate">{formatCurrency(pendingInvoices)}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Scrollable on mobile */}
       <Tabs defaultValue="cases" className="w-full">
-        <TabsList className="border-2 border-border flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="cases">Cases ({cases.length})</TabsTrigger>
-          <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
-          <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
-          <TabsTrigger value="appointments" className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
-            Appointments
-          </TabsTrigger>
-          <TabsTrigger value="messages" className="flex items-center gap-1">
-            <MessageSquare className="h-4 w-4" />
-            Messages
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="border border-border inline-flex w-max sm:w-full h-auto gap-0.5 p-0.5 sm:p-1">
+            <TabsTrigger value="cases" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">Cases</TabsTrigger>
+            <TabsTrigger value="documents" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">Docs</TabsTrigger>
+            <TabsTrigger value="payments" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">Payments</TabsTrigger>
+            <TabsTrigger value="invoices" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">Invoices</TabsTrigger>
+            <TabsTrigger value="appointments" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 flex items-center gap-1">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Appointments</span>
+              <span className="sm:hidden">Appts</span>
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 flex items-center gap-1">
+              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Messages</span>
+              <span className="sm:hidden">Msgs</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="cases" className="mt-4">
           <Card>

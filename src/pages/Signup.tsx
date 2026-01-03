@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { Scale, CheckCircle, XCircle } from 'lucide-react';
 import { useSignupSettings } from '@/hooks/useSignupSettings';
+import { notifyAdmins } from '@/hooks/useNotificationService';
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -84,6 +85,14 @@ export default function Signup() {
         });
         return;
       }
+
+      // Notify admins about new team member registration
+      await notifyAdmins(
+        'New Team Member Registration',
+        `${formData.firstName} ${formData.lastName} (${formData.email}) has registered and is awaiting approval`,
+        'warning',
+        'user'
+      );
 
       setIsSubmitted(true);
       toast({
