@@ -25,6 +25,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useITRPortalEnabled } from '@/hooks/useITRPortal';
+import { useUnreadMessagesCount } from '@/hooks/useUnreadMessages';
+import { Badge } from '@/components/ui/badge';
 
 const adminNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
@@ -60,6 +62,7 @@ export function AppSidebar() {
   const { user, profile, isAdmin, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const { data: itrEnabled } = useITRPortalEnabled();
+  const { data: unreadMessages = 0 } = useUnreadMessagesCount();
 
   const baseNavItems = isAdmin ? adminNavItems : teamNavItems;
   
@@ -97,23 +100,38 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.url}
-            to={item.url}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all rounded-lg",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              )
-            }
-          >
-            <item.icon className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && <span>{item.title}</span>}
-          </NavLink>
-        ))}
+        {navItems.map((item) => {
+          const showBadge = item.url === '/messages' && unreadMessages > 0;
+          
+          return (
+            <NavLink
+              key={item.url}
+              to={item.url}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all rounded-lg relative",
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                )
+              }
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && <span>{item.title}</span>}
+              {showBadge && (
+                <Badge 
+                  variant="destructive" 
+                  className={cn(
+                    "h-5 min-w-[1.25rem] text-xs flex items-center justify-center",
+                    collapsed ? "absolute -top-1 -right-1" : "ml-auto"
+                  )}
+                >
+                  {unreadMessages > 99 ? '99+' : unreadMessages}
+                </Badge>
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* User section */}

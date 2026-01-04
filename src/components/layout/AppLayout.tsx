@@ -4,6 +4,7 @@ import { MobileNav } from './MobileNav';
 import { useAuth } from '@/contexts/AuthContext';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { SkipToMain } from '@/components/accessibility/SkipToMain';
+import { BroadcastDisplay } from '@/components/broadcasts/BroadcastDisplay';
 
 export function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -26,6 +27,8 @@ export function AppLayout() {
       <AppSidebar />
       <div className="flex-1 flex flex-col min-h-screen w-full overflow-x-hidden">
         <MobileNav />
+        {/* Broadcast Banners */}
+        <BroadcastDisplay />
         {/* Desktop Header */}
         <header className="hidden lg:flex items-center justify-end gap-4 p-4 border-b-2 border-border">
           <NotificationBell />

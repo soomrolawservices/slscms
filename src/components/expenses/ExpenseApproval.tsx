@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ExpenseData, useUpdateExpense } from '@/hooks/useExpenses';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
@@ -43,13 +44,15 @@ const EXPENSE_CATEGORIES: Record<string, string> = {
 };
 
 export function ExpenseApproval({ expenses, isLoading }: ExpenseApprovalProps) {
+  const { user } = useAuth();
   const updateExpense = useUpdateExpense();
   const [selectedExpense, setSelectedExpense] = useState<ExpenseData | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
-  const pendingExpenses = expenses.filter(e => e.status === 'pending');
+  // Filter pending expenses and exclude those created by the current user (Separation of Duties)
+  const pendingExpenses = expenses.filter(e => e.status === 'pending' && e.created_by !== user?.id);
 
   const sendNotification = async (expenseId: string, action: 'approved' | 'rejected', reason?: string) => {
     try {
@@ -135,12 +138,22 @@ export function ExpenseApproval({ expenses, isLoading }: ExpenseApprovalProps) {
     },
   ];
 
+  // Count of own expenses that need approval (can't self-approve)
+  const ownPendingExpenses = expenses.filter(e => e.status === 'pending' && e.created_by === user?.id).length;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Pending Approvals</h3>
-          <p className="text-sm text-muted-foreground">{pendingExpenses.length} expenses waiting for review</p>
+          <p className="text-sm text-muted-foreground">
+            {pendingExpenses.length} expenses waiting for review
+            {ownPendingExpenses > 0 && (
+              <span className="text-muted-foreground ml-2">
+                ({ownPendingExpenses} of your own expenses excluded - cannot self-approve)
+              </span>
+            )}
+          </p>
         </div>
       </div>
 

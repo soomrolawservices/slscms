@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { createNotification } from '@/hooks/useCreateNotification';
 
 export interface InvoiceData {
   id: string;
@@ -55,10 +56,31 @@ export function useCreateInvoice() {
           invoice_id: invoiceId,
           created_by: user?.id,
         })
-        .select()
+        .select('*, clients(name)')
         .single();
 
       if (error) throw error;
+
+      // Send notification to client
+      if (result) {
+        const { data: clientAccess } = await supabase
+          .from('client_access')
+          .select('user_id')
+          .eq('client_id', data.client_id)
+          .maybeSingle();
+
+        if (clientAccess?.user_id) {
+          await createNotification({
+            userId: clientAccess.user_id,
+            title: 'New Invoice Generated',
+            message: `Invoice ${invoiceId} for PKR ${data.amount.toLocaleString()} has been generated.`,
+            type: 'warning',
+            entityType: 'invoice',
+            entityId: result.id,
+          });
+        }
+      }
+
       return result;
     },
     onSuccess: () => {
