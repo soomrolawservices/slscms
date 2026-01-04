@@ -115,6 +115,86 @@ export type Database = {
           },
         ]
       }
+      broadcast_dismissals: {
+        Row: {
+          broadcast_id: string
+          dismissed_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          broadcast_id: string
+          dismissed_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          broadcast_id?: string
+          dismissed_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_dismissals_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "broadcast_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broadcast_messages: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          priority: string
+          starts_at: string
+          target_role: Database["public"]["Enums"]["app_role"] | null
+          target_type: string
+          target_user_id: string | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: string
+          starts_at?: string
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+          target_type?: string
+          target_user_id?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: string
+          starts_at?: string
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+          target_type?: string
+          target_user_id?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       case_activities: {
         Row: {
           activity_type: string
@@ -359,6 +439,39 @@ export type Database = {
           },
         ]
       }
+      custom_forms: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          fields: Json
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          fields?: Json
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          fields?: Json
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           case_id: string | null
@@ -508,6 +621,89 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      form_assignments: {
+        Row: {
+          assigned_by: string | null
+          assigned_to: string
+          created_at: string
+          due_date: string | null
+          form_id: string
+          id: string
+          status: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_to: string
+          created_at?: string
+          due_date?: string | null
+          form_id: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_to?: string
+          created_at?: string
+          due_date?: string | null
+          form_id?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_assignments_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "custom_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_submissions: {
+        Row: {
+          assignment_id: string | null
+          data: Json
+          files: Json | null
+          form_id: string
+          id: string
+          submitted_at: string
+          submitted_by: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          data?: Json
+          files?: Json | null
+          form_id: string
+          id?: string
+          submitted_at?: string
+          submitted_by: string
+        }
+        Update: {
+          assignment_id?: string | null
+          data?: Json
+          files?: Json | null
+          form_id?: string
+          id?: string
+          submitted_at?: string
+          submitted_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "form_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_submissions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "custom_forms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoice_line_items: {
         Row: {
@@ -839,6 +1035,54 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          appointment_reminders: boolean
+          case_updates: boolean
+          created_at: string
+          document_uploads: boolean
+          email_enabled: boolean
+          id: string
+          invoice_alerts: boolean
+          message_notifications: boolean
+          push_enabled: boolean
+          sms_enabled: boolean
+          system_announcements: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          appointment_reminders?: boolean
+          case_updates?: boolean
+          created_at?: string
+          document_uploads?: boolean
+          email_enabled?: boolean
+          id?: string
+          invoice_alerts?: boolean
+          message_notifications?: boolean
+          push_enabled?: boolean
+          sms_enabled?: boolean
+          system_announcements?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          appointment_reminders?: boolean
+          case_updates?: boolean
+          created_at?: string
+          document_uploads?: boolean
+          email_enabled?: boolean
+          id?: string
+          invoice_alerts?: boolean
+          message_notifications?: boolean
+          push_enabled?: boolean
+          sms_enabled?: boolean
+          system_announcements?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1007,6 +1251,33 @@ export type Database = {
           phone?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
         }
         Relationships: []
       }
