@@ -26,6 +26,7 @@ import { useClients } from '@/hooks/useClients';
 import { useCases } from '@/hooks/useCases';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { BulkImportDialog } from '@/components/bulk-import/BulkImportDialog';
+import { PinGate } from '@/components/security/PinGate';
 import { format } from 'date-fns';
 
 interface PaymentWithRelations {
@@ -226,9 +227,10 @@ export default function Payments() {
   };
 
   return (
+    <PinGate title="Payments" description="Track payment records and transactions">
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pr-24">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Payments</h1>
           <p className="text-muted-foreground">Track payment records and transactions</p>
@@ -389,5 +391,6 @@ export default function Payments() {
 
       <ConfirmModal open={isDeleteOpen} onOpenChange={setIsDeleteOpen} title="Delete Payment" description="Are you sure you want to delete this payment?" confirmLabel="Delete" onConfirm={handleDelete} variant="destructive" />
     </div>
+    </PinGate>
   );
 }

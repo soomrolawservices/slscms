@@ -22,6 +22,7 @@ import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useCredentials, useCreateCredential, useUpdateCredential, useDeleteCredential } from '@/hooks/useCredentials';
 import { useClients } from '@/hooks/useClients';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
+import { PinGate } from '@/components/security/PinGate';
 import { toast } from '@/hooks/use-toast';
 
 interface CredentialWithClient {
@@ -174,8 +175,9 @@ export default function Credentials() {
   };
 
   return (
+    <PinGate title="Credentials" description="Securely store client credentials">
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pr-24">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Credentials</h1>
           <p className="text-muted-foreground">Securely store client credentials</p>
@@ -270,5 +272,6 @@ export default function Credentials() {
 
       <ConfirmModal open={isDeleteOpen} onOpenChange={setIsDeleteOpen} title="Delete Credential" description="Are you sure you want to delete this credential?" confirmLabel="Delete" onConfirm={handleDelete} variant="destructive" />
     </div>
+    </PinGate>
   );
 }

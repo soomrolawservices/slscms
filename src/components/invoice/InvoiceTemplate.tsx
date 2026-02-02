@@ -148,3 +148,192 @@ export function InvoiceTemplate({ invoice, client, caseName }: InvoiceTemplatePr
     </div>
   );
 }
+
+// Generate Client Invoice PDF for download
+import soomroLogo from '@/assets/soomro-law-logo.png';
+
+interface ClientInvoiceData {
+  invoice_id: string;
+  amount: number;
+  status: string;
+  due_date: string | null;
+  created_at: string;
+  client?: {
+    name: string;
+    email?: string;
+    phone?: string;
+    cnic?: string;
+  };
+  case?: {
+    title: string;
+  };
+  line_items?: Array<{
+    description: string;
+    quantity: number;
+    unit_price: number;
+    amount: number;
+  }>;
+}
+
+async function getLogoBase64(): Promise<string> {
+  try {
+    const response = await fetch(soomroLogo);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return '';
+  }
+}
+
+export async function generateClientInvoicePDF(invoice: ClientInvoiceData) {
+  const logoBase64 = await getLogoBase64();
+  
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Invoice ${invoice.invoice_id} - Soomro Law Services</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; -webkit-print-color-adjust: exact !important; }
+        .wrapper { max-width: 850px; margin: 0 auto; padding: 40px 20px 100px; }
+        .container { background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #006A4E 0%, #00857C 100%); padding: 40px; color: white; }
+        .header-content { display: flex; justify-content: space-between; align-items: flex-start; }
+        .logo-section { display: flex; align-items: center; gap: 16px; }
+        .logo { width: 70px; height: 70px; object-fit: contain; background: white; border-radius: 12px; padding: 8px; }
+        .logo-fallback { width: 70px; height: 70px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; color: #006A4E; }
+        .company-info h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+        .company-info .tagline { font-size: 12px; opacity: 0.9; font-style: italic; }
+        .invoice-badge { text-align: right; }
+        .invoice-badge .label { font-size: 14px; opacity: 0.9; margin-bottom: 4px; }
+        .invoice-badge .number { font-size: 28px; font-weight: 700; }
+        .main { padding: 40px; }
+        .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
+        .info-card { background: #f8fafc; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; }
+        .info-card h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 12px; }
+        .info-card .name { font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 8px; }
+        .info-card p { font-size: 13px; color: #64748b; margin: 4px 0; }
+        .status-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .status-paid { background: #dcfce7; color: #166534; }
+        .status-unpaid { background: #fef3c7; color: #92400e; }
+        .status-overdue { background: #fee2e2; color: #991b1b; }
+        .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+        .date-item { text-align: center; padding: 16px; background: #f1f5f9; border-radius: 8px; }
+        .date-item label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+        .date-item span { font-size: 15px; font-weight: 600; color: #1e293b; }
+        .table-wrapper { margin-bottom: 30px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+        .invoice-table { width: 100%; border-collapse: collapse; }
+        .invoice-table th { background: #006A4E; color: white; padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .invoice-table th:last-child { text-align: right; }
+        .invoice-table td { padding: 16px 20px; font-size: 14px; border-bottom: 1px solid #e2e8f0; }
+        .invoice-table td:last-child { text-align: right; font-weight: 600; }
+        .invoice-table tr:last-child td { border-bottom: none; }
+        .invoice-table tr:nth-child(even) { background: #f8fafc; }
+        .totals-section { display: flex; justify-content: flex-end; }
+        .totals-card { width: 320px; background: #f8fafc; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+        .totals-row { display: flex; justify-content: space-between; padding: 12px 20px; font-size: 14px; border-bottom: 1px solid #e2e8f0; }
+        .totals-row:last-child { border-bottom: none; }
+        .totals-row.total { background: linear-gradient(135deg, #006A4E 0%, #00857C 100%); color: white; font-size: 18px; font-weight: 700; padding: 18px 20px; }
+        .footer { margin-top: 40px; padding-top: 30px; border-top: 2px solid #e2e8f0; }
+        .footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .footer-section h4 { font-size: 13px; font-weight: 600; color: #006A4E; margin-bottom: 12px; }
+        .footer-section p { font-size: 13px; color: #64748b; margin: 4px 0; }
+        .thank-you { text-align: center; margin-top: 30px; padding: 20px; background: linear-gradient(135deg, rgba(0,106,78,0.05), rgba(0,133,124,0.05)); border-radius: 12px; }
+        .thank-you p { font-size: 16px; font-weight: 600; color: #006A4E; }
+        .thank-you small { font-size: 12px; color: #64748b; }
+        .download-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 16px 24px; box-shadow: 0 -4px 24px rgba(0,0,0,0.1); display: flex; justify-content: center; gap: 12px; z-index: 1000; }
+        .download-btn { background: linear-gradient(135deg, #006A4E 0%, #00857C 100%); color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,106,78,0.3); }
+        .print-btn { background: white; color: #006A4E; border: 2px solid #006A4E; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        @media print { .download-bar { display: none !important; } body { background: white; } .wrapper { padding: 0; } .container { box-shadow: none; } }
+      </style>
+    </head>
+    <body>
+      <div class="download-bar">
+        <button class="print-btn" onclick="window.print()">🖨️ Print</button>
+        <button class="download-btn" onclick="window.print()">📥 Download PDF</button>
+      </div>
+      <div class="wrapper">
+        <div class="container">
+          <header class="header">
+            <div class="header-content">
+              <div class="logo-section">
+                ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" class="logo" />` : '<div class="logo-fallback">SL</div>'}
+                <div class="company-info">
+                  <h1>Soomro Law Services</h1>
+                  <p class="tagline">Just Relax! You are in Safe Hands.</p>
+                </div>
+              </div>
+              <div class="invoice-badge">
+                <p class="label">Invoice Number</p>
+                <p class="number">${invoice.invoice_id}</p>
+              </div>
+            </div>
+          </header>
+          <div class="main">
+            <div class="info-row">
+              <div class="info-card">
+                <h3>Billed To</h3>
+                <p class="name">${invoice.client?.name || 'Client'}</p>
+                ${invoice.client?.email ? `<p>📧 ${invoice.client.email}</p>` : ''}
+                ${invoice.client?.phone ? `<p>📱 ${invoice.client.phone}</p>` : ''}
+                ${invoice.client?.cnic ? `<p>🆔 ${invoice.client.cnic}</p>` : ''}
+              </div>
+              <div class="info-card">
+                <h3>Payment Status</h3>
+                <span class="status-badge status-${invoice.status === 'paid' ? 'paid' : invoice.status === 'overdue' ? 'overdue' : 'unpaid'}">${invoice.status.toUpperCase()}</span>
+                ${invoice.case?.title ? `<p style="margin-top: 16px;"><strong>Case:</strong> ${invoice.case.title}</p>` : ''}
+              </div>
+            </div>
+            <div class="date-grid">
+              <div class="date-item"><label>Issue Date</label><span>${format(new Date(invoice.created_at), 'MMM d, yyyy')}</span></div>
+              <div class="date-item"><label>Due Date</label><span>${invoice.due_date ? format(new Date(invoice.due_date), 'MMM d, yyyy') : 'Upon Receipt'}</span></div>
+              <div class="date-item"><label>Amount Due</label><span style="color: #006A4E;">PKR ${invoice.amount.toLocaleString()}</span></div>
+            </div>
+            <div class="table-wrapper">
+              <table class="invoice-table">
+                <thead><tr><th>Description</th><th style="width: 80px; text-align: center;">Qty</th><th style="width: 120px; text-align: right;">Rate</th><th style="width: 120px;">Amount</th></tr></thead>
+                <tbody>
+                  ${invoice.line_items && invoice.line_items.length > 0 
+                    ? invoice.line_items.map(item => `<tr><td>${item.description}</td><td style="text-align: center;">${item.quantity}</td><td style="text-align: right;">PKR ${item.unit_price.toLocaleString()}</td><td>PKR ${item.amount.toLocaleString()}</td></tr>`).join('')
+                    : `<tr><td>Legal Services</td><td style="text-align: center;">1</td><td style="text-align: right;">PKR ${invoice.amount.toLocaleString()}</td><td>PKR ${invoice.amount.toLocaleString()}</td></tr>`
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="totals-section">
+              <div class="totals-card">
+                <div class="totals-row"><span>Subtotal</span><span>PKR ${invoice.amount.toLocaleString()}</span></div>
+                <div class="totals-row"><span>Tax (0%)</span><span>PKR 0</span></div>
+                <div class="totals-row total"><span>Total Due</span><span>PKR ${invoice.amount.toLocaleString()}</span></div>
+              </div>
+            </div>
+            <div class="footer">
+              <div class="footer-grid">
+                <div class="footer-section"><h4>Payment Information</h4><p><strong>Bank:</strong> Bank of Punjab</p><p><strong>Account Title:</strong> Soomro Law Services</p></div>
+                <div class="footer-section"><h4>Contact Us</h4><p>📞 +92 309 5407616 / +92 314 4622396</p><p>✉️ soomrolawservices@gmail.com</p></div>
+              </div>
+              <div class="thank-you"><p>Thank you for your business!</p><small>If you have any questions about this invoice, please contact us</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+  }
+}
