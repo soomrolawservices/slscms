@@ -13,10 +13,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { NotificationPreferencesSettings } from '@/components/settings/NotificationPreferencesSettings';
 import { BroadcastManager } from '@/components/broadcasts/BroadcastManager';
 import { FormBuilder } from '@/components/forms/FormBuilder';
+import { TOTPSetup } from '@/components/security/TOTPSetup';
 
 export default function Settings() {
   const { user, profile, isAdmin } = useAuth();
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileName, setProfileName] = useState(profile?.name || '');
   const [profilePhone, setProfilePhone] = useState(profile?.phone || '');
@@ -172,37 +172,8 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-border">
-            <CardHeader className="border-b-2 border-border">
-              <CardTitle>Two-Factor Authentication</CardTitle>
-              <CardDescription>
-                Add an extra layer of security to your account
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between max-w-md">
-                <div>
-                  <p className="font-medium">Enable 2FA</p>
-                  <p className="text-sm text-muted-foreground">
-                    Use an authenticator app for additional security
-                  </p>
-                </div>
-                <Switch
-                  checked={twoFactorEnabled}
-                  onCheckedChange={setTwoFactorEnabled}
-                />
-              </div>
-              {twoFactorEnabled && (
-                <div className="mt-4 p-4 bg-muted border-2 border-border max-w-md">
-                  <p className="text-sm font-medium mb-2">Setup Instructions</p>
-                  <p className="text-sm text-muted-foreground">
-                    Scan the QR code with your authenticator app to complete setup.
-                    (This would show a QR code in a real implementation)
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* TOTP 2FA Setup */}
+          <TOTPSetup />
         </TabsContent>
 
         {/* Broadcasts - Admin Only */}

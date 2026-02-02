@@ -5,17 +5,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area } from 'recharts';
 import { useClients } from '@/hooks/useClients';
 import { useCases } from '@/hooks/useCases';
 import { usePayments } from '@/hooks/usePayments';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useExpenses } from '@/hooks/useExpenses';
-import { FileText, TrendingUp, Users, Briefcase, CreditCard, Wallet, Download, Calendar as CalendarIcon, ArrowUpRight, ArrowDownRight, TrendingDown } from 'lucide-react';
+import { FileText, TrendingUp, Users, Briefcase, CreditCard, Wallet, Download, Calendar as CalendarIcon, ArrowUpRight, ArrowDownRight, TrendingDown, FileSpreadsheet, File } from 'lucide-react';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DATE_PRESETS, useReportsFilters, type DateRangePreset } from '@/hooks/useReportsFilters';
 import { cn } from '@/lib/utils';
+import { exportReportsToPDF, exportReportsToExcel } from '@/lib/reports-export';
 
 const COLORS = ['#006A4E', '#00857C', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -25,6 +27,7 @@ export default function Reports() {
   const { data: payments = [], isLoading: loadingPayments } = usePayments();
   const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
   const { data: expenses = [], isLoading: loadingExpenses } = useExpenses();
+  const [activeTab, setActiveTab] = useState('financial');
 
   const {
     datePreset,
@@ -177,6 +180,31 @@ export default function Reports() {
 
   const formatCurrency = (value: number) => `PKR ${value.toLocaleString()}`;
 
+  // Export handlers
+  const handleExportPDF = () => {
+    const dateRangeStr = dateRange 
+      ? `${format(dateRange.start, 'MMM d, yyyy')} - ${format(dateRange.end, 'MMM d, yyyy')}`
+      : 'All Time';
+    
+    exportReportsToPDF({
+      stats,
+      monthlyData,
+      dateRange: dateRangeStr,
+    }, activeTab);
+  };
+
+  const handleExportExcel = () => {
+    const dateRangeStr = dateRange 
+      ? `${format(dateRange.start, 'MMM d, yyyy')} - ${format(dateRange.end, 'MMM d, yyyy')}`
+      : 'All Time';
+    
+    exportReportsToExcel({
+      stats,
+      monthlyData,
+      dateRange: dateRangeStr,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -242,10 +270,24 @@ export default function Reports() {
             </div>
           )}
 
-          <Button variant="outline" className="w-full sm:w-auto">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto gap-2">
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2">
+                <File className="h-4 w-4" />
+                Export to PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportExcel} className="gap-2">
+                <FileSpreadsheet className="h-4 w-4" />
+                Export to Excel (CSV)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -356,7 +398,7 @@ export default function Reports() {
       </div>
 
       {/* Charts */}
-      <Tabs defaultValue="financial" className="space-y-4">
+      <Tabs defaultValue="financial" className="space-y-4" onValueChange={setActiveTab}>
         <TabsList className="border-2 border-border flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="financial">Financial</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
