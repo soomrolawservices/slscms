@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, Printer, Upload } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, Printer, Upload, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -31,6 +31,8 @@ import { InvoiceLineItemsEditor } from '@/components/invoice/InvoiceLineItemsEdi
 import { BulkImportDialog } from '@/components/bulk-import/BulkImportDialog';
 import { exportToPDF } from '@/lib/export-utils';
 import { generateInvoicePDF } from '@/components/invoice/InvoicePDF';
+import { generateClientInvoicePDF } from '@/components/invoice/InvoiceTemplate';
+import { PinGate } from '@/components/security/PinGate';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -201,6 +203,28 @@ export default function Invoices() {
     });
   };
 
+  const handleClientDownload = async (invoice: InvoiceWithRelations) => {
+    const client = clients.find(c => c.id === invoice.client_id);
+    const caseData = (cases as { id: string; title: string }[]).find(c => c.id === invoice.case_id);
+    
+    await generateClientInvoicePDF({
+      invoice_id: invoice.invoice_id,
+      amount: invoice.amount,
+      status: invoice.status,
+      due_date: invoice.due_date,
+      created_at: invoice.created_at,
+      client: client ? {
+        name: client.name,
+        email: client.email || undefined,
+        phone: client.phone || undefined,
+        cnic: client.cnic || undefined,
+      } : undefined,
+      case: caseData ? { title: caseData.title } : undefined,
+      line_items: existingLineItems.length > 0 ? existingLineItems : undefined,
+    });
+    toast({ title: 'Opening Invoice', description: 'Client invoice PDF opened in new tab' });
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (lineItems.length === 0 || !lineItems.some(item => item.description && item.amount > 0)) {
@@ -311,8 +335,9 @@ export default function Invoices() {
   };
 
   return (
+    <PinGate title="Invoices" description="Manage billing and invoices">
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pr-24">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Invoices</h1>
           <p className="text-muted-foreground">Manage billing and invoices</p>
@@ -355,6 +380,7 @@ export default function Invoices() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-popover border-2 border-border">
                   <DropdownMenuItem onClick={() => handleView(row)}><Eye className="h-4 w-4 mr-2" />View</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleClientDownload(row)}><FileText className="h-4 w-4 mr-2" />Client Invoice</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handlePrintInvoice(row)}><Printer className="h-4 w-4 mr-2" />Print Invoice</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleExportPDF(row)}><Download className="h-4 w-4 mr-2" />Export PDF</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleEdit(row)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
@@ -447,5 +473,6 @@ export default function Invoices() {
         onImport={handleBulkImport}
       />
     </div>
+    </PinGate>
   );
 }
