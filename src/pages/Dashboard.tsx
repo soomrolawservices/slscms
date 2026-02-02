@@ -13,6 +13,8 @@ import { usePayments } from '@/hooks/usePayments';
 import { AIAnalytics } from '@/components/dashboard/AIAnalytics';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { ExpenseBreakdownChart } from '@/components/dashboard/ExpenseBreakdownChart';
+import { FinancialSummaryCards } from '@/components/dashboard/FinancialSummaryCards';
+import { UnassignedCounters } from '@/components/dashboard/UnassignedCounters';
 import { useState } from 'react';
 
 export default function Dashboard() {
@@ -91,6 +93,12 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Unassigned Items Alert */}
+      {isAdmin && <UnassignedCounters />}
+
+      {/* Financial Summary Cards - Admin Only */}
+      {isAdmin && <FinancialSummaryCards />}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
