@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload, Clock, MessageSquarePlus } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload, Clock, MessageSquarePlus, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -30,6 +30,7 @@ import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { BulkAssignment } from '@/components/assignments/BulkAssignment';
 import { BulkImportDialog } from '@/components/bulk-import/BulkImportDialog';
 import { CaseTimeline } from '@/components/cases/CaseTimeline';
+import { CaseKanban } from '@/components/cases/CaseKanban';
 import { AddCaseActivityForm } from '@/components/cases/AddCaseActivityForm';
 import { useLogCaseActivity } from '@/hooks/useCaseActivities';
 import { format } from 'date-fns';
@@ -65,6 +66,7 @@ export default function Cases() {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const { logActivity } = useLogCaseActivity();
 
   const handleBulkImport = async (data: Record<string, string>[]) => {
@@ -244,62 +246,88 @@ export default function Cases() {
         onImport={handleBulkImport}
       />
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="border-2 border-border">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="archived">Archived</TabsTrigger>
-        </TabsList>
-        <TabsContent value={activeTab} className="mt-4">
-          <DataTable
-            data={filteredCases}
-            columns={columns}
-            searchPlaceholder="Search cases..."
-            searchKey="title"
-            title="Cases"
-            isLoading={isLoading}
-            selectable={isAdmin}
-            selectedIds={selectedCaseIds}
-            onSelectionChange={setSelectedCaseIds}
-            actions={(row) => (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-popover border-2 border-border">
-                  <DropdownMenuItem onClick={() => handleView(row)}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSelectedCase(row); setIsTimelineOpen(true); }}>
-                    <Clock className="h-4 w-4 mr-2" />
-                    Timeline
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSelectedCase(row); setIsAddActivityOpen(true); }}>
-                    <MessageSquarePlus className="h-4 w-4 mr-2" />
-                    Add Activity
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleEdit(row)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => handleDeleteClick(row)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          />
-        </TabsContent>
-      </Tabs>
+      {/* View Toggle & Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="border-2 border-border">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="archived">Archived</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4 mr-1" />
+            List
+          </Button>
+          <Button
+            variant={viewMode === 'kanban' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('kanban')}
+          >
+            <LayoutGrid className="h-4 w-4 mr-1" />
+            Kanban
+          </Button>
+        </div>
+      </div>
+
+      {/* Kanban View */}
+      {viewMode === 'kanban' ? (
+        <CaseKanban onViewCase={handleView} />
+      ) : (
+        /* List View */
+        <DataTable
+          data={filteredCases}
+          columns={columns}
+          searchPlaceholder="Search cases..."
+          searchKey="title"
+          title="Cases"
+          isLoading={isLoading}
+          selectable={isAdmin}
+          selectedIds={selectedCaseIds}
+          onSelectionChange={setSelectedCaseIds}
+          actions={(row) => (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover border-2 border-border">
+                <DropdownMenuItem onClick={() => handleView(row)}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSelectedCase(row); setIsTimelineOpen(true); }}>
+                  <Clock className="h-4 w-4 mr-2" />
+                  Timeline
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSelectedCase(row); setIsAddActivityOpen(true); }}>
+                  <MessageSquarePlus className="h-4 w-4 mr-2" />
+                  Add Activity
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleEdit(row)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => handleDeleteClick(row)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        />
+      )}
 
       {/* Create Modal */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
