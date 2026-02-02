@@ -14,6 +14,7 @@ import { NotificationPreferencesSettings } from '@/components/settings/Notificat
 import { BroadcastManager } from '@/components/broadcasts/BroadcastManager';
 import { FormBuilder } from '@/components/forms/FormBuilder';
 import { TOTPSetup } from '@/components/security/TOTPSetup';
+import { SecurityPinSettings } from '@/components/settings/SecurityPinSettings';
 
 export default function Settings() {
   const { user, profile, isAdmin } = useAuth();
@@ -146,6 +147,9 @@ export default function Settings() {
 
         {/* Security Settings */}
         <TabsContent value="security" className="space-y-6">
+          {/* Security PIN Settings */}
+          <SecurityPinSettings />
+          
           <Card className="border-2 border-border">
             <CardHeader className="border-b-2 border-border">
               <CardTitle>Change Password</CardTitle>

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Lock, ShieldCheck, Key } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useSecurityPin } from '@/hooks/useSecurityPin';
 
 interface PinGateProps {
   children: ReactNode;
@@ -12,7 +13,6 @@ interface PinGateProps {
   description?: string;
 }
 
-const SECONDARY_PIN = '1234'; // In production, this should be stored securely in user settings
 const SESSION_KEY = 'pin_verified_pages';
 const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
 
@@ -22,6 +22,7 @@ interface VerifiedSession {
 }
 
 export function PinGate({ children, title, description }: PinGateProps) {
+  const { data: storedPin, isLoading: isPinLoading } = useSecurityPin();
   const [isVerified, setIsVerified] = useState(false);
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -46,7 +47,9 @@ export function PinGate({ children, title, description }: PinGateProps) {
   }, [pageKey]);
 
   const handleVerify = () => {
-    if (pinInput === SECONDARY_PIN) {
+    if (!storedPin) return;
+    
+    if (pinInput === storedPin) {
       setIsVerified(true);
       setShowPinDialog(false);
       setPinInput('');
@@ -107,6 +110,25 @@ export function PinGate({ children, title, description }: PinGateProps) {
     }
     toast({ title: 'Page Locked', description: 'PIN required for access' });
   };
+
+  // Show loading while fetching PIN
+  if (isPinLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">{title}</h1>
+            <p className="text-muted-foreground">{description}</p>
+          </div>
+        </div>
+        <Card className="border-2 border-border">
+          <CardContent className="flex items-center justify-center py-20">
+            <div className="animate-pulse text-muted-foreground">Loading security...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isVerified) {
     return (
@@ -216,3 +238,4 @@ export function PinGate({ children, title, description }: PinGateProps) {
     </div>
   );
 }
+
