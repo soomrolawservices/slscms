@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Link as LinkIcon, Upload } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Link as LinkIcon, Upload, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -29,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, type ClientData } from '@/hooks/useClients';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { ClientAccountLinker } from '@/components/admin/ClientAccountLinker';
 import { BulkAssignment } from '@/components/assignments/BulkAssignment';
@@ -37,6 +39,7 @@ import { toast } from '@/hooks/use-toast';
 
 export default function Clients() {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   const { data: clients = [], isLoading } = useClients();
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
@@ -271,10 +274,15 @@ export default function Clients() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-popover border-2 border-border">
+                  <DropdownMenuItem onClick={() => navigate(`/clients/${row.id}`)}>
+                    <User className="h-4 w-4 mr-2" />
+                    360° View
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleView(row)}>
                     <Eye className="h-4 w-4 mr-2" />
-                    View
+                    Quick View
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleEdit(row)}>
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
