@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, Printer, Upload, FileText } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Trash2, Download, Printer, Upload, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DataTable, type Column } from '@/components/ui/data-table';
+import { EditableDataTable, type EditableColumn } from '@/components/ui/editable-data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -104,7 +104,15 @@ export default function Invoices() {
   const clientOptions = clients.map((c) => ({ value: c.id, label: c.name }));
   const caseOptions = (cases as { id: string; title: string }[]).map((c) => ({ value: c.id, label: c.title }));
 
-  const columns: Column<InvoiceWithRelations>[] = [
+  const handleInlineUpdate = async (id: string, key: string, value: string) => {
+    if (key === 'amount') {
+      await updateInvoice.mutateAsync({ id, [key]: parseFloat(value) || 0 });
+    } else {
+      await updateInvoice.mutateAsync({ id, [key]: value });
+    }
+  };
+
+  const columns: EditableColumn<InvoiceWithRelations>[] = [
     {
       key: 'invoice_id',
       header: 'Invoice ID',
@@ -135,7 +143,14 @@ export default function Invoices() {
     {
       key: 'status',
       header: 'Status',
-      render: (row) => <StatusBadge status={row.status} />,
+      editable: true,
+      editType: 'status',
+      options: [
+        { value: 'unpaid', label: 'Unpaid' },
+        { value: 'paid', label: 'Paid' },
+        { value: 'overdue', label: 'Overdue' },
+        { value: 'partial', label: 'Partial' },
+      ],
     },
   ];
 
@@ -364,13 +379,15 @@ export default function Invoices() {
           <TabsTrigger value="overdue">Overdue</TabsTrigger>
         </TabsList>
         <TabsContent value={activeTab} className="mt-4">
-          <DataTable
+          <EditableDataTable
             data={filteredInvoices}
             columns={columns}
             searchPlaceholder="Search invoices..."
             searchKey="invoice_id"
             title="Invoices"
             isLoading={isLoading}
+            onUpdate={handleInlineUpdate}
+            isUpdating={updateInvoice.isPending}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -383,7 +400,6 @@ export default function Invoices() {
                   <DropdownMenuItem onClick={() => handleClientDownload(row)}><FileText className="h-4 w-4 mr-2" />Client Invoice</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handlePrintInvoice(row)}><Printer className="h-4 w-4 mr-2" />Print Invoice</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleExportPDF(row)}><Download className="h-4 w-4 mr-2" />Export PDF</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleEdit(row)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(row)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
