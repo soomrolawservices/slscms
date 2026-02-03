@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload, Clock, MessageSquarePlus, LayoutGrid, List } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Trash2, Upload, Clock, MessageSquarePlus, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DataTable, type Column } from '@/components/ui/data-table';
+import { EditableDataTable, type EditableColumn } from '@/components/ui/editable-data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -125,7 +125,11 @@ export default function Cases() {
 
   const clientOptions = clients.map((c) => ({ value: c.id, label: c.name }));
 
-  const columns: Column<CaseWithClient>[] = [
+  const handleInlineUpdate = async (id: string, key: string, value: string) => {
+    await updateCase.mutateAsync({ id, [key]: value });
+  };
+
+  const columns: EditableColumn<CaseWithClient>[] = [
     {
       key: 'id',
       header: 'Case ID',
@@ -135,7 +139,8 @@ export default function Cases() {
       key: 'title',
       header: 'Title',
       sortable: true,
-      render: (row) => <span className="font-medium">{row.title}</span>,
+      editable: true,
+      editType: 'text',
     },
     {
       key: 'client_id',
@@ -145,7 +150,15 @@ export default function Cases() {
     {
       key: 'status',
       header: 'Status',
-      render: (row) => <StatusBadge status={row.status} />,
+      editable: true,
+      editType: 'status',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'in_progress', label: 'In Progress' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'closed', label: 'Closed' },
+        { value: 'archived', label: 'Archived' },
+      ],
     },
     {
       key: 'updated_at',
@@ -256,21 +269,23 @@ export default function Cases() {
           </TabsList>
         </Tabs>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/30">
           <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('list')}
+            className="h-8 px-3"
           >
-            <List className="h-4 w-4 mr-1" />
+            <List className="h-4 w-4 mr-1.5" />
             List
           </Button>
           <Button
-            variant={viewMode === 'kanban' ? 'default' : 'outline'}
+            variant={viewMode === 'kanban' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('kanban')}
+            className="h-8 px-3"
           >
-            <LayoutGrid className="h-4 w-4 mr-1" />
+            <LayoutGrid className="h-4 w-4 mr-1.5" />
             Kanban
           </Button>
         </div>
@@ -281,13 +296,15 @@ export default function Cases() {
         <CaseKanban onViewCase={handleView} />
       ) : (
         /* List View */
-        <DataTable
+        <EditableDataTable
           data={filteredCases}
           columns={columns}
           searchPlaceholder="Search cases..."
           searchKey="title"
           title="Cases"
           isLoading={isLoading}
+          onUpdate={handleInlineUpdate}
+          isUpdating={updateCase.isPending}
           selectable={isAdmin}
           selectedIds={selectedCaseIds}
           onSelectionChange={setSelectedCaseIds}
@@ -312,10 +329,6 @@ export default function Cases() {
                   Add Activity
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleEdit(row)}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive"
                   onClick={() => handleDeleteClick(row)}

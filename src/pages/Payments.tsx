@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DataTable, type Column } from '@/components/ui/data-table';
+import { EditableDataTable, type EditableColumn } from '@/components/ui/editable-data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -125,7 +125,15 @@ export default function Payments() {
   const clientOptions = clients.map((c) => ({ value: c.id, label: c.name }));
   const caseOptions = (cases as { id: string; title: string }[]).map((c) => ({ value: c.id, label: c.title }));
 
-  const columns: Column<PaymentWithRelations>[] = [
+  const handleInlineUpdate = async (id: string, key: string, value: string) => {
+    if (key === 'amount') {
+      await updatePayment.mutateAsync({ id, [key]: parseFloat(value) || 0 });
+    } else {
+      await updatePayment.mutateAsync({ id, [key]: value });
+    }
+  };
+
+  const columns: EditableColumn<PaymentWithRelations>[] = [
     {
       key: 'payment_id',
       header: 'Payment ID',
@@ -135,7 +143,8 @@ export default function Payments() {
       key: 'title',
       header: 'Title',
       sortable: true,
-      render: (row) => <span className="font-medium">{row.title}</span>,
+      editable: true,
+      editType: 'text',
     },
     {
       key: 'amount',
@@ -162,7 +171,13 @@ export default function Payments() {
     {
       key: 'status',
       header: 'Status',
-      render: (row) => <StatusBadge status={row.status} />,
+      editable: true,
+      editType: 'status',
+      options: [
+        { value: 'pending', label: 'Pending' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'failed', label: 'Failed' },
+      ],
     },
   ];
 
@@ -263,13 +278,15 @@ export default function Payments() {
           <TabsTrigger value="failed">Failed</TabsTrigger>
         </TabsList>
         <TabsContent value={activeTab} className="mt-4">
-          <DataTable
+          <EditableDataTable
             data={filteredPayments}
             columns={columns}
             searchPlaceholder="Search payments..."
             searchKey="title"
             title="Payments"
             isLoading={isLoading}
+            onUpdate={handleInlineUpdate}
+            isUpdating={updatePayment.isPending}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -281,10 +298,6 @@ export default function Payments() {
                   <DropdownMenuItem onClick={() => handleView(row)}>
                     <Eye className="h-4 w-4 mr-2" />
                     View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleEdit(row)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(row)}>
                     <Trash2 className="h-4 w-4 mr-2" />

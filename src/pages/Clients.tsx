@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Link as LinkIcon, Upload, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DataTable, type Column } from '@/components/ui/data-table';
+import { EditableDataTable, type EditableColumn } from '@/components/ui/editable-data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -118,38 +118,57 @@ export default function Clients() {
     activeTab === 'all' ? true : client.status === activeTab
   );
 
-  const columns: Column<ClientData>[] = [
+  const handleInlineUpdate = async (id: string, key: string, value: string) => {
+    await updateClient.mutateAsync({ id, [key]: value });
+  };
+
+  const columns: EditableColumn<ClientData>[] = [
     {
       key: 'name',
       header: 'Client Name',
       sortable: true,
-      render: (row) => <span className="font-medium">{row.name}</span>,
+      editable: true,
+      editType: 'text',
     },
     {
       key: 'client_type',
       header: 'Type',
-      render: (row) => <span className="capitalize">{row.client_type}</span>,
+      editable: true,
+      editType: 'status',
+      options: [
+        { value: 'individual', label: 'Individual' },
+        { value: 'corporate', label: 'Corporate' },
+        { value: 'government', label: 'Government' },
+      ],
     },
     {
       key: 'phone',
       header: 'Phone',
-      render: (row) => row.phone || '-',
+      editable: true,
+      editType: 'tel',
     },
     {
       key: 'email',
       header: 'Email',
-      render: (row) => row.email || '-',
+      editable: true,
+      editType: 'email',
     },
     {
       key: 'region',
       header: 'Region',
       sortable: true,
-      render: (row) => row.region || '-',
+      editable: true,
+      editType: 'text',
     },
     {
       key: 'status',
       header: 'Status',
-      render: (row) => <StatusBadge status={row.status} />,
+      editable: true,
+      editType: 'status',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+      ],
     },
   ];
 
@@ -256,13 +275,15 @@ export default function Clients() {
           <TabsTrigger value="inactive">Inactive</TabsTrigger>
         </TabsList>
         <TabsContent value={activeTab} className="mt-4">
-          <DataTable
+          <EditableDataTable
             data={filteredClients}
             columns={columns}
             searchPlaceholder="Search clients..."
             searchKey="name"
             title="Clients"
             isLoading={isLoading}
+            onUpdate={handleInlineUpdate}
+            isUpdating={updateClient.isPending}
             selectable={isAdmin}
             selectedIds={selectedClientIds}
             onSelectionChange={setSelectedClientIds}
@@ -283,10 +304,6 @@ export default function Clients() {
                     Quick View
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleEdit(row)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"
                     onClick={() => handleDeleteClick(row)}
