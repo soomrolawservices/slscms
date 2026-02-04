@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -20,7 +20,6 @@ import {
   ArrowDown,
   Pencil,
   Check,
-  X
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -76,7 +75,17 @@ export function EditableDataTable<T extends { id: string }>({
   const [sortKey, setSortKey] = useState<keyof T | string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingCell, setEditingCell] = useState<{ rowId: string; key: string } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ rowId: string; key: string; colIndex: number; rowIndex: number } | null>(null);
+
+  // Build editable columns index for navigation
+  const editableColumnIndices = useMemo(() => 
+    columns.reduce((acc, col, idx) => {
+      if (col.editable && col.editType !== 'status') {
+        acc.push(idx);
+      }
+      return acc;
+    }, [] as number[]),
+  [columns]);
 
   const handleSelectAll = () => {
     if (!onSelectionChange) return;
@@ -151,6 +160,57 @@ export function EditableDataTable<T extends { id: string }>({
     );
   };
 
+  // Navigation helpers for keyboard shortcuts
+  const moveToNextCell = useCallback((currentRowIndex: number, currentColIndex: number) => {
+    const currentEditableIndex = editableColumnIndices.indexOf(currentColIndex);
+    if (currentEditableIndex < editableColumnIndices.length - 1) {
+      // Move to next column in same row
+      const nextColIndex = editableColumnIndices[currentEditableIndex + 1];
+      setEditingCell({ 
+        rowId: paginatedData[currentRowIndex].id, 
+        key: columns[nextColIndex].key as string,
+        colIndex: nextColIndex,
+        rowIndex: currentRowIndex
+      });
+    } else if (currentRowIndex < paginatedData.length - 1) {
+      // Move to first editable column in next row
+      const nextColIndex = editableColumnIndices[0];
+      setEditingCell({ 
+        rowId: paginatedData[currentRowIndex + 1].id, 
+        key: columns[nextColIndex].key as string,
+        colIndex: nextColIndex,
+        rowIndex: currentRowIndex + 1
+      });
+    } else {
+      setEditingCell(null);
+    }
+  }, [editableColumnIndices, paginatedData, columns]);
+
+  const moveToPrevCell = useCallback((currentRowIndex: number, currentColIndex: number) => {
+    const currentEditableIndex = editableColumnIndices.indexOf(currentColIndex);
+    if (currentEditableIndex > 0) {
+      // Move to prev column in same row
+      const prevColIndex = editableColumnIndices[currentEditableIndex - 1];
+      setEditingCell({ 
+        rowId: paginatedData[currentRowIndex].id, 
+        key: columns[prevColIndex].key as string,
+        colIndex: prevColIndex,
+        rowIndex: currentRowIndex
+      });
+    } else if (currentRowIndex > 0) {
+      // Move to last editable column in prev row
+      const prevColIndex = editableColumnIndices[editableColumnIndices.length - 1];
+      setEditingCell({ 
+        rowId: paginatedData[currentRowIndex - 1].id, 
+        key: columns[prevColIndex].key as string,
+        colIndex: prevColIndex,
+        rowIndex: currentRowIndex - 1
+      });
+    } else {
+      setEditingCell(null);
+    }
+  }, [editableColumnIndices, paginatedData, columns]);
+
   const handleExportCSV = () => {
     const exportColumns: ExportColumn<T>[] = columns.map(col => ({
       key: col.key as string,
@@ -168,7 +228,7 @@ export function EditableDataTable<T extends { id: string }>({
     exportToPDF(sortedData as unknown as Record<string, unknown>[], exportColumns as ExportColumn<Record<string, unknown>>[], title.toLowerCase().replace(/\s+/g, '-'), title);
   };
 
-  const renderCell = (row: T, column: EditableColumn<T>) => {
+  const renderCell = (row: T, column: EditableColumn<T>, rowIndex: number, colIndex: number) => {
     const value = String(row[column.key as keyof T] ?? '');
     const isCurrentlyEditing = isEditMode || (editingCell?.rowId === row.id && editingCell?.key === column.key);
 
@@ -189,37 +249,21 @@ export function EditableDataTable<T extends { id: string }>({
       return column.render(row, isCurrentlyEditing);
     }
 
-    // Editable fields in edit mode
-    if (column.editable && isCurrentlyEditing && column.editType !== 'status') {
+    // Editable fields
+    if (column.editable && column.editType !== 'status') {
       return (
         <EditableCell
           value={value}
           onChange={(newValue) => handleCellUpdate(row.id, column.key as string, newValue)}
-          isEditing={true}
+          isEditing={isCurrentlyEditing}
           type={column.editType || 'text'}
           options={column.options}
           disabled={isUpdating}
+          onStartEdit={() => setEditingCell({ rowId: row.id, key: column.key as string, colIndex, rowIndex })}
+          onCancelEdit={() => setEditingCell(null)}
+          onMoveNext={() => moveToNextCell(rowIndex, colIndex)}
+          onMovePrev={() => moveToPrevCell(rowIndex, colIndex)}
         />
-      );
-    }
-
-    // Click to edit individual cell
-    if (column.editable && !isEditMode) {
-      return (
-        <div
-          className="cursor-pointer hover:bg-muted/50 px-1 -mx-1 rounded transition-colors group"
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditingCell({ rowId: row.id, key: column.key as string });
-          }}
-        >
-          {column.editType === 'select' && column.options ? (
-            <span className="capitalize">{column.options.find(o => o.value === value)?.label || value || '-'}</span>
-          ) : (
-            <span>{value || '-'}</span>
-          )}
-          <Pencil className="h-3 w-3 inline ml-1 opacity-0 group-hover:opacity-50" />
-        </div>
       );
     }
 
@@ -351,7 +395,7 @@ export function EditableDataTable<T extends { id: string }>({
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedData.map((row) => (
+              paginatedData.map((row, rowIndex) => (
                 <TableRow
                   key={row.id}
                   className={cn(
@@ -370,9 +414,9 @@ export function EditableDataTable<T extends { id: string }>({
                       />
                     </TableCell>
                   )}
-                  {columns.map((column) => (
+                  {columns.map((column, colIndex) => (
                     <TableCell key={String(column.key)} onClick={(e) => column.editable && e.stopPropagation()}>
-                      {renderCell(row, column)}
+                      {renderCell(row, column, rowIndex, colIndex)}
                     </TableCell>
                   ))}
                   {actions && (
@@ -394,7 +438,7 @@ export function EditableDataTable<T extends { id: string }>({
             No results found
           </div>
         ) : (
-          paginatedData.map((row) => (
+          paginatedData.map((row, rowIndex) => (
             <div
               key={row.id}
               className={cn(
@@ -404,13 +448,13 @@ export function EditableDataTable<T extends { id: string }>({
               )}
               onClick={() => !isEditMode && onRowClick?.(row)}
             >
-              {columns.map((column) => (
+              {columns.map((column, colIndex) => (
                 <div key={String(column.key)} className="flex justify-between items-center" onClick={(e) => column.editable && e.stopPropagation()}>
                   <span className="text-sm font-medium text-muted-foreground">
                     {column.header}
                   </span>
                   <span className="text-sm text-right">
-                    {renderCell(row, column)}
+                    {renderCell(row, column, rowIndex, colIndex)}
                   </span>
                 </div>
               ))}

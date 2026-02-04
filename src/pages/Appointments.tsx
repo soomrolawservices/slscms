@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Bell, Video, Building, MapPin, Mail, Check, UserPlus } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Bell, Video, Building, MapPin, Mail, Check, UserPlus, Calendar, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -26,9 +26,11 @@ import { useClients } from '@/hooks/useClients';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { ReminderDialog } from '@/components/appointments/ReminderDialog';
+import { AppointmentCalendar } from '@/components/appointments/AppointmentCalendar';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 
 const typeIcons: Record<string, React.ElementType> = {
   'in-office': Building,
@@ -46,6 +48,7 @@ export default function Appointments() {
   const deleteAppointment = useDeleteAppointment();
 
   const [activeTab, setActiveTab] = useState('scheduled');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -279,84 +282,132 @@ export default function Appointments() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
             Appointments
           </h1>
           <p className="text-muted-foreground">
             Manage your schedule and meetings
           </p>
         </div>
-        <Button 
-          onClick={() => { resetForm(); setIsCreateOpen(true); }} 
-          className="shadow-md bg-gradient-to-r from-primary to-primary/90"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Schedule Appointment
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                "rounded-none h-9 px-3",
+                viewMode === 'list' && "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('calendar')}
+              className={cn(
+                "rounded-none h-9 px-3 border-l border-border",
+                viewMode === 'calendar' && "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+            >
+              <Calendar className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button 
+            onClick={() => { resetForm(); setIsCreateOpen(true); }} 
+            className="shadow-md"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Schedule
+          </Button>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="border-2 border-border">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="pending">Pending Approval</TabsTrigger>
-          <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-        </TabsList>
-        <TabsContent value={activeTab} className="mt-4">
-          <DataTable
-            data={filteredAppointments}
-            columns={columns}
-            searchPlaceholder="Search appointments..."
-            searchKey="topic"
-            title="Appointments"
-            isLoading={isLoading}
-            actions={(row) => (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-popover border-2 border-border">
-                  <DropdownMenuItem onClick={() => handleView(row)}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </DropdownMenuItem>
-                  {row.status === 'pending' && (
-                    <DropdownMenuItem 
-                      onClick={() => handleApproveClick(row)}
-                      className="text-green-600"
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Approve & Assign
+      {/* Calendar View */}
+      {viewMode === 'calendar' && (
+        <AppointmentCalendar
+          appointments={appointments}
+          onSelectAppointment={(apt) => {
+            setSelectedAppointment(apt);
+            setIsViewOpen(true);
+          }}
+          onSelectDate={(date) => {
+            setFormData(prev => ({
+              ...prev,
+              date: format(date, 'yyyy-MM-dd')
+            }));
+            setIsCreateOpen(true);
+          }}
+        />
+      )}
+
+      {/* List View */}
+      {viewMode === 'list' && (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="border border-border">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+          </TabsList>
+          <TabsContent value={activeTab} className="mt-4">
+            <DataTable
+              data={filteredAppointments}
+              columns={columns}
+              searchPlaceholder="Search appointments..."
+              searchKey="topic"
+              title="Appointments"
+              isLoading={isLoading}
+              actions={(row) => (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-popover border border-border">
+                    <DropdownMenuItem onClick={() => handleView(row)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
                     </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem 
-                    onClick={() => handleSetReminder(row)}
-                    className="text-primary"
-                  >
-                    <Bell className="h-4 w-4 mr-2" />
-                    Set Reminder
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleEdit(row)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => handleDeleteClick(row)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Cancel
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          />
-        </TabsContent>
-      </Tabs>
+                    {row.status === 'pending' && (
+                      <DropdownMenuItem 
+                        onClick={() => handleApproveClick(row)}
+                        className="text-accent"
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Approve & Assign
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem 
+                      onClick={() => handleSetReminder(row)}
+                      className="text-primary"
+                    >
+                      <Bell className="h-4 w-4 mr-2" />
+                      Set Reminder
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleEdit(row)}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => handleDeleteClick(row)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Cancel
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            />
+          </TabsContent>
+        </Tabs>
+      )}
+
 
       {/* Create Modal */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
