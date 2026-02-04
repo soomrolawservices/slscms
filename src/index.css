@@ -3,12 +3,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Vibrant Modern Law Services Design System */
+/* Premium Professional Law Services Design System - Deep Navy + Emerald */
 
 @layer base {
   :root {
-    /* Deep navy base with vibrant accents - Faysal Bank inspired */
-    --background: 220 25% 97%;
+    /* Light mode - Clean, professional with emerald accents */
+    --background: 210 20% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -17,45 +17,45 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary: Deep teal/navy inspired by Faysal Bank */
-    --primary: 199 89% 28%;
+    /* Primary: Deep Navy Blue */
+    --primary: 222 47% 20%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 199 30% 95%;
-    --secondary-foreground: 199 89% 28%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 47% 20%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 43%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    /* Accent: Warm gold/amber */
-    --accent: 38 92% 50%;
+    /* Accent: Rich Emerald Green */
+    --accent: 160 84% 32%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 199 89% 28%;
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 160 84% 32%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
-    /* Sidebar with gradient effect */
-    --sidebar-background: 199 89% 28%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 38 92% 50%;
+    /* Sidebar - Premium Navy Gradient */
+    --sidebar-background: 222 47% 15%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 160 84% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 199 70% 35%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 199 70% 40%;
-    --sidebar-ring: 38 92% 50%;
+    --sidebar-accent: 222 40% 22%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 222 40% 25%;
+    --sidebar-ring: 160 84% 42%;
 
-    /* Vibrant chart colors */
-    --chart-1: 199 89% 48%;
-    --chart-2: 38 92% 50%;
-    --chart-3: 160 84% 39%;
-    --chart-4: 291 64% 42%;
-    --chart-5: 346 77% 50%;
+    /* Chart colors - Professional palette */
+    --chart-1: 222 47% 35%;
+    --chart-2: 160 84% 40%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 0 72% 55%;
 
     /* Status colors */
     --success: 160 84% 39%;
@@ -65,27 +65,28 @@
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --sidebar: 199 89% 28%;
+    --sidebar: 222 47% 15%;
 
-    --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-    --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+    --font-sans: 'Inter', 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --font-serif: 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
     --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 
-    /* Modern soft shadows */
-    --shadow-2xs: 0 1px 2px 0 hsl(220 13% 50% / 0.05);
-    --shadow-xs: 0 1px 3px 0 hsl(220 13% 50% / 0.1), 0 1px 2px -1px hsl(220 13% 50% / 0.1);
-    --shadow-sm: 0 2px 4px 0 hsl(220 13% 50% / 0.1), 0 1px 2px -1px hsl(220 13% 50% / 0.1);
-    --shadow: 0 4px 6px -1px hsl(220 13% 50% / 0.1), 0 2px 4px -2px hsl(220 13% 50% / 0.1);
+    /* Premium soft shadows */
+    --shadow-2xs: 0 1px 2px 0 hsl(220 13% 50% / 0.04);
+    --shadow-xs: 0 1px 3px 0 hsl(220 13% 50% / 0.08), 0 1px 2px -1px hsl(220 13% 50% / 0.08);
+    --shadow-sm: 0 2px 4px 0 hsl(220 13% 50% / 0.08), 0 1px 2px -1px hsl(220 13% 50% / 0.08);
+    --shadow: 0 4px 6px -1px hsl(220 13% 50% / 0.08), 0 2px 4px -2px hsl(220 13% 50% / 0.08);
     --shadow-md: 0 6px 10px -2px hsl(220 13% 50% / 0.1), 0 4px 6px -4px hsl(220 13% 50% / 0.1);
     --shadow-lg: 0 10px 15px -3px hsl(220 13% 50% / 0.1), 0 4px 6px -4px hsl(220 13% 50% / 0.1);
     --shadow-xl: 0 20px 25px -5px hsl(220 13% 50% / 0.1), 0 8px 10px -6px hsl(220 13% 50% / 0.1);
-    --shadow-2xl: 0 25px 50px -12px hsl(220 13% 50% / 0.25);
+    --shadow-2xl: 0 25px 50px -12px hsl(220 13% 50% / 0.2);
 
     --tracking-normal: 0em;
     --spacing: 0.25rem;
   }
 
   .dark {
+    /* Dark mode - Deep sophisticated navy */
     --background: 222 47% 8%;
     --foreground: 210 40% 98%;
 
@@ -95,39 +96,41 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 199 80% 55%;
+    /* Primary: Brighter Navy for dark mode */
+    --primary: 210 50% 60%;
     --primary-foreground: 222 47% 8%;
 
-    --secondary: 199 30% 15%;
-    --secondary-foreground: 199 80% 55%;
+    --secondary: 222 40% 16%;
+    --secondary-foreground: 210 50% 70%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 222 40% 14%;
+    --muted-foreground: 215 20% 60%;
 
-    --accent: 38 92% 50%;
+    /* Accent: Vibrant Emerald */
+    --accent: 160 84% 42%;
     --accent-foreground: 0 0% 0%;
 
-    --destructive: 0 62% 50%;
+    --destructive: 0 62% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 20%;
-    --input: 217 33% 20%;
-    --ring: 199 80% 55%;
+    --border: 222 40% 18%;
+    --input: 222 40% 18%;
+    --ring: 160 84% 42%;
 
-    --sidebar-background: 222 47% 8%;
+    --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary: 160 84% 42%;
     --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 199 50% 20%;
+    --sidebar-accent: 222 45% 14%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 25%;
-    --sidebar-ring: 38 92% 50%;
+    --sidebar-border: 222 40% 18%;
+    --sidebar-ring: 160 84% 42%;
 
-    --chart-1: 199 80% 55%;
-    --chart-2: 38 92% 55%;
-    --chart-3: 160 70% 50%;
-    --chart-4: 291 54% 55%;
-    --chart-5: 346 67% 55%;
+    --chart-1: 210 50% 65%;
+    --chart-2: 160 84% 50%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 280 55% 65%;
+    --chart-5: 0 62% 60%;
 
     --success: 160 70% 45%;
     --success-foreground: 0 0% 100%;
@@ -136,8 +139,8 @@
     --info: 199 80% 55%;
     --info-foreground: 0 0% 0%;
 
-    --sidebar: 222 47% 8%;
-    --radius: 0.75rem;
+    --sidebar: 222 47% 6%;
+    --radius: 0.625rem;
 
     --shadow-2xs: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
     --shadow-xs: 0 1px 3px 0 hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.3);

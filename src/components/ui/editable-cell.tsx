@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface EditableCellProps {
@@ -13,6 +12,10 @@ interface EditableCellProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  onStartEdit?: () => void;
+  onCancelEdit?: () => void;
+  onMoveNext?: () => void;
+  onMovePrev?: () => void;
 }
 
 export function EditableCell({
@@ -24,6 +27,10 @@ export function EditableCell({
   placeholder,
   className,
   disabled = false,
+  onStartEdit,
+  onCancelEdit,
+  onMoveNext,
+  onMovePrev,
 }: EditableCellProps) {
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,6 +42,7 @@ export function EditableCell({
   useEffect(() => {
     if (isEditing && inputRef.current && type !== 'select') {
       inputRef.current.focus();
+      inputRef.current.select();
     }
   }, [isEditing, type]);
 
@@ -46,18 +54,50 @@ export function EditableCell({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handleBlur();
+      onMoveNext?.();
     } else if (e.key === 'Escape') {
+      e.preventDefault();
       setLocalValue(value);
+      onCancelEdit?.();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      handleBlur();
+      if (e.shiftKey) {
+        onMovePrev?.();
+      } else {
+        onMoveNext?.();
+      }
+    }
+  };
+
+  const handleDoubleClick = () => {
+    if (!disabled && !isEditing) {
+      onStartEdit?.();
     }
   };
 
   if (!isEditing) {
     if (type === 'select' && options.length > 0) {
       const option = options.find(o => o.value === value);
-      return <span className={cn("capitalize", className)}>{option?.label || value || '-'}</span>;
+      return (
+        <span 
+          className={cn("capitalize cursor-pointer hover:bg-muted/50 px-1 -mx-1 rounded transition-colors", className)}
+          onDoubleClick={handleDoubleClick}
+        >
+          {option?.label || value || '-'}
+        </span>
+      );
     }
-    return <span className={className}>{value || '-'}</span>;
+    return (
+      <span 
+        className={cn("cursor-pointer hover:bg-muted/50 px-1 -mx-1 rounded transition-colors", className)}
+        onDoubleClick={handleDoubleClick}
+      >
+        {value || '-'}
+      </span>
+    );
   }
 
   if (type === 'select') {
@@ -73,7 +113,7 @@ export function EditableCell({
         <SelectTrigger className="h-8 w-full min-w-[100px]">
           <SelectValue placeholder={placeholder || "Select..."} />
         </SelectTrigger>
-        <SelectContent className="bg-popover border-2 border-border z-50">
+        <SelectContent className="bg-popover border border-border z-50">
           {options.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
@@ -132,8 +172,15 @@ export function DraggableStatus({ value, options, onChange, disabled }: Draggabl
     }
   };
 
+  const getStatusColor = (optionValue: string, isActive: boolean) => {
+    if (isActive) {
+      return 'bg-accent text-accent-foreground ring-2 ring-accent/50 shadow-sm';
+    }
+    return 'bg-muted/60 text-muted-foreground hover:bg-muted';
+  };
+
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-1.5">
       {options.map((option) => (
         <div
           key={option.value}
@@ -144,11 +191,9 @@ export function DraggableStatus({ value, options, onChange, disabled }: Draggabl
           onDrop={(e) => handleDrop(e, option.value)}
           onClick={() => !disabled && onChange(option.value)}
           className={cn(
-            "px-2 py-0.5 rounded text-xs font-medium cursor-pointer transition-all select-none",
-            option.value === value
-              ? "bg-primary text-primary-foreground ring-2 ring-primary/50"
-              : "bg-muted text-muted-foreground hover:bg-muted/80",
-            isDragOver === option.value && option.value !== value && "ring-2 ring-primary/50 bg-primary/10",
+            "px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer transition-all select-none",
+            getStatusColor(option.value, option.value === value),
+            isDragOver === option.value && option.value !== value && "ring-2 ring-accent/50 bg-accent/10 scale-105",
             disabled && "opacity-50 cursor-not-allowed"
           )}
         >
