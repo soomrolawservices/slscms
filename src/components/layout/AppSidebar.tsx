@@ -19,14 +19,15 @@ import {
   MessageSquare,
   Calculator
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useITRPortalEnabled } from '@/hooks/useITRPortal';
 import { useUnreadMessagesCount } from '@/hooks/useUnreadMessages';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const adminNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
@@ -63,6 +64,7 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { data: itrEnabled } = useITRPortalEnabled();
   const { data: unreadMessages = 0 } = useUnreadMessagesCount();
+  const location = useLocation();
 
   const baseNavItems = isAdmin ? adminNavItems : teamNavItems;
   
@@ -74,12 +76,12 @@ export function AppSidebar() {
   return (
     <aside 
       className={cn(
-        "hidden lg:flex flex-col bg-gradient-to-b from-sidebar to-sidebar/95 transition-all duration-300 shadow-xl",
+        "hidden lg:flex flex-col bg-gradient-to-b from-sidebar to-sidebar/95 transition-all duration-300 shadow-xl sticky top-0 h-screen",
         collapsed ? "w-16" : "w-64"
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border/30">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border/30 flex-shrink-0">
         {!collapsed && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
@@ -99,22 +101,22 @@ export function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+      <ScrollArea className="flex-1">
+        <nav className="p-2 space-y-1">
         {navItems.map((item) => {
           const showBadge = item.url === '/messages' && unreadMessages > 0;
+          const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + '/');
           
           return (
             <NavLink
               key={item.url}
               to={item.url}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all rounded-lg relative",
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                )
-              }
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all rounded-lg relative",
+                isActive
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              )}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
               {!collapsed && <span>{item.title}</span>}
@@ -132,10 +134,11 @@ export function AppSidebar() {
             </NavLink>
           );
         })}
-      </nav>
+        </nav>
+      </ScrollArea>
 
       {/* User section */}
-      <div className="p-4 border-t border-sidebar-border/30">
+      <div className="p-4 border-t border-sidebar-border/30 flex-shrink-0">
         {!collapsed && (
           <div className="mb-3 p-2 rounded-lg bg-sidebar-accent/30">
             <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.name}</p>

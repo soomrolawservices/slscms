@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { MoreHorizontal, Check, X, Eye, UserCog, Shield } from 'lucide-react';
+import { MoreHorizontal, Check, X, Eye, UserCog, Shield, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DataTable, type Column } from '@/components/ui/data-table';
+import { EditableDataTable, type EditableColumn } from '@/components/ui/editable-data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -20,19 +20,33 @@ import {
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
-import { useUsers, useUpdateUserStatus, useUpdateUserRole, type UserWithRole } from '@/hooks/useUsers';
+import { useUsers, useUpdateUserStatus, useUpdateUserRole, useUpdateUserProfile, type UserWithRole } from '@/hooks/useUsers';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import type { Database } from '@/integrations/supabase/types';
+import { toast } from '@/hooks/use-toast';
 
 type UserStatus = Database['public']['Enums']['user_status'];
 type AppRole = Database['public']['Enums']['app_role'];
+
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending', color: 'bg-yellow-500' },
+  { value: 'active', label: 'Active', color: 'bg-green-500' },
+  { value: 'blocked', label: 'Blocked', color: 'bg-red-500' },
+];
+
+const ROLE_OPTIONS = [
+  { value: 'team_member', label: 'Team Member' },
+  { value: 'admin', label: 'Admin' },
+  { value: 'client', label: 'Client' },
+];
 
 export default function Users() {
   const { isAdmin } = useAuth();
   const { data: users = [], isLoading } = useUsers();
   const updateUserStatus = useUpdateUserStatus();
   const updateUserRole = useUpdateUserRole();
+  const updateUserProfile = useUpdateUserProfile();
 
   const [activeTab, setActiveTab] = useState('all');
   const [isRoleOpen, setIsRoleOpen] = useState(false);
@@ -40,15 +54,17 @@ export default function Users() {
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole>('team_member');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const filteredUsers = users.filter((user) =>
     activeTab === 'all' ? true : user.status === activeTab
   );
 
-  const columns: Column<UserWithRole>[] = [
+  const columns: EditableColumn<UserWithRole>[] = [
     {
       key: 'name',
       header: 'User',
+      editable: false,
       render: (row) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8 border border-border">
@@ -67,24 +83,53 @@ export default function Users() {
     {
       key: 'phone',
       header: 'Phone',
-      render: (row) => row.phone || '-',
+      editable: true,
+      editType: 'tel',
+      bulkEditable: false,
     },
     {
       key: 'cnic',
       header: 'CNIC',
-      render: (row) => row.cnic || '-',
+      editable: true,
+      editType: 'text',
+      bulkEditable: false,
     },
     {
       key: 'role',
       header: 'Role',
-      render: (row) => <span className="capitalize">{row.role?.replace('_', ' ') || 'Team Member'}</span>,
+      editable: true,
+      editType: 'select',
+      options: ROLE_OPTIONS,
+      bulkEditable: true,
     },
     {
       key: 'status',
       header: 'Status',
-      render: (row) => <StatusBadge status={row.status} />,
+      editable: true,
+      editType: 'status',
+      options: STATUS_OPTIONS,
+      bulkEditable: true,
     },
   ];
+
+  const handleUpdate = async (id: string, key: string, value: string) => {
+    if (key === 'status') {
+      await updateUserStatus.mutateAsync({ userId: id, status: value as UserStatus });
+    } else if (key === 'role') {
+      await updateUserRole.mutateAsync({ userId: id, role: value as AppRole });
+    } else {
+      await updateUserProfile.mutateAsync({ userId: id, [key]: value });
+    }
+  };
+
+  const handleBulkUpdate = async (ids: string[], updates: Record<string, string>) => {
+    const key = Object.keys(updates)[0];
+    const value = updates[key];
+    
+    for (const id of ids) {
+      await handleUpdate(id, key, value);
+    }
+  };
 
   const handleApprove = async (user: UserWithRole) => {
     await updateUserStatus.mutateAsync({ userId: user.id, status: 'active' });
@@ -169,13 +214,19 @@ export default function Users() {
           <TabsTrigger value="blocked">Blocked</TabsTrigger>
         </TabsList>
         <TabsContent value={activeTab} className="mt-4">
-          <DataTable
+          <EditableDataTable
             data={filteredUsers}
             columns={columns}
             searchPlaceholder="Search users..."
             searchKey="name"
             title="Users"
             isLoading={isLoading}
+            onUpdate={handleUpdate}
+            selectable={true}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onBulkUpdate={handleBulkUpdate}
+            isUpdating={updateUserStatus.isPending || updateUserRole.isPending || updateUserProfile.isPending}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
+import { useNavigate } from 'react-router-dom';
 
 // Type declarations for Web Speech API
 interface SpeechRecognitionEvent extends Event {
@@ -73,10 +74,12 @@ export function VoiceAgent({ onClose }: VoiceAgentProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(true);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   
   const recognitionRef = useRef<SpeechRecognitionInterface | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check browser support
@@ -119,10 +122,21 @@ export function VoiceAgent({ onClose }: VoiceAgentProps) {
 
     synthRef.current = window.speechSynthesis;
 
+    // Load voices (may be async on some browsers)
+    const loadVoices = () => {
+      const voices = synthRef.current?.getVoices() || [];
+      setAvailableVoices(voices);
+    };
+    
+    loadVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     // Add welcome message
     setMessages([{
       role: 'assistant',
-      content: "Hello! I'm your AI assistant. I can help you manage clients, cases, documents, appointments, and more. Just speak your request or type it below. For example, try saying 'Show me all active cases' or 'Create a new client'.",
+      content: "Hello! I'm your AI voice assistant. I can help you with:\n\n• **Navigate** - Go to any page (e.g., 'Go to clients', 'Open dashboard')\n• **Search** - Find information (e.g., 'How many active cases?')\n• **Reports** - Get analytics (e.g., 'What's the total revenue?')\n• **Insights** - Ask business questions\n\nTry saying: 'Go to clients' or 'Show me revenue stats'",
       timestamp: new Date()
     }]);
 
@@ -143,17 +157,23 @@ export function VoiceAgent({ onClose }: VoiceAgentProps) {
 
     synthRef.current.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1;
+    utterance.rate = 0.95; // Slightly slower for clarity
     utterance.pitch = 1;
     utterance.volume = 1;
     
-    // Try to use a natural voice
-    const voices = synthRef.current.getVoices();
+    // Try to use best quality voice available
+    const voices = availableVoices.length > 0 ? availableVoices : synthRef.current.getVoices();
+    
+    // Prioritize high-quality voices
     const preferredVoice = voices.find(v => 
-      v.name.includes('Google') || 
-      v.name.includes('Natural') || 
-      v.name.includes('Samantha')
-    ) || voices[0];
+      v.name.includes('Google UK English Female') ||
+      v.name.includes('Google US English') ||
+      v.name.includes('Microsoft Zira') ||
+      v.name.includes('Microsoft David') ||
+      v.name.includes('Samantha') ||
+      v.name.includes('Karen') ||
+      v.name.includes('Daniel')
+    ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
     
     if (preferredVoice) {
       utterance.voice = preferredVoice;
@@ -164,7 +184,64 @@ export function VoiceAgent({ onClose }: VoiceAgentProps) {
     utterance.onerror = () => setIsSpeaking(false);
 
     synthRef.current.speak(utterance);
-  }, [isMuted]);
+  }, [isMuted, availableVoices]);
+
+  // Handle navigation commands locally
+  const handleNavigationCommand = useCallback((text: string): boolean => {
+    const lowerText = text.toLowerCase();
+    
+    const routes: Record<string, string> = {
+      'dashboard': '/dashboard',
+      'home': '/dashboard',
+      'clients': '/clients',
+      'client': '/clients',
+      'cases': '/cases',
+      'case': '/cases',
+      'documents': '/documents',
+      'document': '/documents',
+      'payments': '/payments',
+      'payment': '/payments',
+      'invoices': '/invoices',
+      'invoice': '/invoices',
+      'expenses': '/expenses',
+      'expense': '/expenses',
+      'appointments': '/appointments',
+      'appointment': '/appointments',
+      'calendar': '/appointments',
+      'messages': '/messages',
+      'message': '/messages',
+      'chat': '/messages',
+      'credentials': '/credentials',
+      'users': '/users',
+      'team': '/users',
+      'settings': '/settings',
+      'reports': '/reports',
+      'analytics': '/reports',
+      'permissions': '/permissions',
+    };
+
+    // Check for navigation intent
+    const navPhrases = ['go to', 'open', 'show me', 'navigate to', 'take me to', 'show'];
+    const hasNavIntent = navPhrases.some(phrase => lowerText.includes(phrase));
+    
+    if (hasNavIntent) {
+      for (const [keyword, route] of Object.entries(routes)) {
+        if (lowerText.includes(keyword)) {
+          navigate(route);
+          const pageName = keyword.charAt(0).toUpperCase() + keyword.slice(1);
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `Navigating to ${pageName}...`,
+            timestamp: new Date()
+          }]);
+          speak(`Opening ${pageName}`);
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }, [navigate, speak]);
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
@@ -196,6 +273,12 @@ export function VoiceAgent({ onClose }: VoiceAgentProps) {
     };
     setMessages(prev => [...prev, userMessage]);
     setTranscript('');
+
+    // Check for navigation commands first
+    if (handleNavigationCommand(text)) {
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -218,12 +301,42 @@ export function VoiceAgent({ onClose }: VoiceAgentProps) {
       };
       setMessages(prev => [...prev, assistantMessage]);
       
-      // Speak the response
-      speak(response.replace(/[*#`]/g, '')); // Remove markdown for speech
+      // Speak the response (clean markdown and limit length for TTS)
+      const cleanResponse = response
+        .replace(/[*#`_~]/g, '') // Remove markdown
+        .replace(/\n+/g, '. ') // Replace newlines with pauses
+        .substring(0, 500); // Limit length for TTS
+      speak(cleanResponse);
     } catch (error: any) {
+      const errorMessage = error.message || 'Failed to process voice command';
+      
+      // Handle common errors with helpful messages
+      if (errorMessage.includes('Unauthorized') || errorMessage.includes('401')) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "I need you to be logged in to access that information. Please make sure you're signed in.",
+          timestamp: new Date()
+        }]);
+        speak("Please log in to use this feature.");
+      } else if (errorMessage.includes('Forbidden') || errorMessage.includes('403')) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "You don't have permission for this action. Only admins can access AI analytics.",
+          timestamp: new Date()
+        }]);
+        speak("This feature requires admin permissions.");
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "I had trouble processing that. You can ask me about your business data, navigate to pages, or get analytics. Try: 'Go to clients' or 'What's the revenue?'",
+          timestamp: new Date()
+        }]);
+        speak("Sorry, I had trouble with that request. Please try again.");
+      }
+      
       toast({
         title: 'Error',
-        description: error.message || 'Failed to process voice command',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
@@ -231,13 +344,13 @@ export function VoiceAgent({ onClose }: VoiceAgentProps) {
     }
   };
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     if (isSpeaking) {
       synthRef.current?.cancel();
       setIsSpeaking(false);
     }
     setIsMuted(!isMuted);
-  };
+  }, [isSpeaking, isMuted]);
 
   if (!isSupported) {
     return (
