@@ -4,11 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
-import { OnboardingWizard, useOnboarding } from "@/components/onboarding/OnboardingWizard";
+import { OnboardingWizard, useOnboardingForUser } from "@/components/onboarding/OnboardingWizard";
 import { VoiceFAB } from "@/components/voice/VoiceFAB";
 
 import Login from "./pages/Login";
@@ -47,14 +47,21 @@ import ITRExtensions from "./pages/itr/ITRExtensions";
 const queryClient = new QueryClient();
 
 function AppContent() {
-  const { showOnboarding, setShowOnboarding } = useOnboarding();
+  const { user, userRole, isAuthenticated } = useAuth();
+  const isClient = userRole === 'client';
+  const { showOnboarding, setShowOnboarding } = useOnboardingForUser(user?.id, isClient);
 
   return (
     <>
-      {showOnboarding && <OnboardingWizard onComplete={() => setShowOnboarding(false)} />}
+      {showOnboarding && isAuthenticated && (
+        <OnboardingWizard 
+          onComplete={() => setShowOnboarding(false)} 
+          isClient={isClient}
+        />
+      )}
       <Toaster />
       <Sonner />
-      <VoiceFAB />
+      {isAuthenticated && !isClient && <VoiceFAB />}
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />

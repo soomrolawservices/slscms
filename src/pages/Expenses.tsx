@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Upload, FileImage, BarChart3 } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Trash2, Upload, FileImage, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DataTable, type Column } from '@/components/ui/data-table';
+import { EditableDataTable, type EditableColumn } from '@/components/ui/editable-data-table';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -42,6 +42,14 @@ const EXPENSE_CATEGORIES = [
   { value: 'other', label: 'Other' },
 ];
 
+const EXPENSE_CATEGORIES_OPTIONS = EXPENSE_CATEGORIES;
+
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending', color: 'bg-yellow-500' },
+  { value: 'approved', label: 'Approved', color: 'bg-green-500' },
+  { value: 'rejected', label: 'Rejected', color: 'bg-red-500' },
+];
+
 export default function Expenses() {
   const { data: expenses = [], isLoading } = useExpenses();
   const { isAdmin } = useAuth();
@@ -53,12 +61,12 @@ export default function Expenses() {
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'reports' | 'approval'>('list');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<ExpenseData | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -83,36 +91,41 @@ export default function Expenses() {
     activeTab === 'all' ? true : e.status === activeTab
   );
 
-  const columns: Column<ExpenseData>[] = [
+  const columns: EditableColumn<ExpenseData>[] = [
     {
       key: 'date',
       header: 'Date',
       sortable: true,
+      editable: false,
       render: (row) => format(new Date(row.date), 'MMM d, yyyy'),
     },
     {
       key: 'title',
       header: 'Title',
       sortable: true,
-      render: (row) => <span className="font-medium">{row.title}</span>,
+      editable: true,
+      editType: 'text',
+      bulkEditable: false,
     },
     {
       key: 'amount',
       header: 'Amount',
       sortable: true,
+      editable: false,
       render: (row) => <span className="font-bold">PKR {Number(row.amount).toLocaleString()}</span>,
     },
     {
       key: 'category',
       header: 'Category',
-      render: (row) => {
-        const cat = EXPENSE_CATEGORIES.find(c => c.value === row.category);
-        return cat?.label || row.category || '-';
-      },
+      editable: true,
+      editType: 'select',
+      options: EXPENSE_CATEGORIES_OPTIONS,
+      bulkEditable: true,
     },
     {
       key: 'receipt_path',
       header: 'Receipt',
+      editable: false,
       render: (row) => row.receipt_path ? (
         <a href={row.receipt_path} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
           <FileImage className="h-4 w-4" />
@@ -123,25 +136,26 @@ export default function Expenses() {
     {
       key: 'status',
       header: 'Status',
-      render: (row) => <StatusBadge status={row.status} />,
+      editable: true,
+      editType: 'status',
+      options: STATUS_OPTIONS,
+      bulkEditable: true,
     },
   ];
+
+  const handleFieldUpdate = async (id: string, key: string, value: string) => {
+    await updateExpense.mutateAsync({ id, [key]: value });
+  };
+
+  const handleBulkUpdate = async (ids: string[], updates: Record<string, string>) => {
+    for (const id of ids) {
+      await updateExpense.mutateAsync({ id, ...updates });
+    }
+  };
 
   const handleView = (expense: ExpenseData) => {
     setSelectedExpense(expense);
     setIsViewOpen(true);
-  };
-
-  const handleEdit = (expense: ExpenseData) => {
-    setSelectedExpense(expense);
-    setFormData({
-      title: expense.title,
-      amount: Number(expense.amount),
-      date: expense.date.split('T')[0],
-      category: expense.category || '',
-      status: expense.status,
-    });
-    setIsEditOpen(true);
   };
 
   const handleDeleteClick = (expense: ExpenseData) => {
@@ -170,30 +184,6 @@ export default function Expenses() {
     }
 
     setIsCreateOpen(false);
-    resetForm();
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedExpense) return;
-
-    let receiptPath = selectedExpense.receipt_path;
-
-    // Upload new receipt if provided
-    if (receiptFile) {
-      receiptPath = await uploadReceipt.mutateAsync({ file: receiptFile, expenseId: selectedExpense.id });
-    }
-
-    await updateExpense.mutateAsync({
-      id: selectedExpense.id,
-      title: formData.title,
-      amount: formData.amount,
-      date: formData.date,
-      category: formData.category || null,
-      status: formData.status,
-      receipt_path: receiptPath,
-    });
-    setIsEditOpen(false);
     resetForm();
   };
 
@@ -283,13 +273,19 @@ export default function Expenses() {
               <TabsTrigger value="rejected">Rejected</TabsTrigger>
             </TabsList>
         <TabsContent value={activeTab} className="mt-4">
-          <DataTable
+          <EditableDataTable
             data={filteredExpenses}
             columns={columns}
             searchPlaceholder="Search expenses..."
             searchKey="title"
             title="Expenses"
             isLoading={isLoading}
+            onUpdate={handleFieldUpdate}
+            selectable={true}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onBulkUpdate={handleBulkUpdate}
+            isUpdating={updateExpense.isPending}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -301,10 +297,6 @@ export default function Expenses() {
                   <DropdownMenuItem onClick={() => handleView(row)}>
                     <Eye className="h-4 w-4 mr-2" />
                     View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleEdit(row)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(row)}>
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -373,64 +365,6 @@ export default function Expenses() {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={createExpense.isPending}>{createExpense.isPending ? 'Creating...' : 'Add Expense'}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Modal */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="border-2 border-border">
-          <DialogHeader>
-            <DialogTitle>Edit Expense</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleUpdate}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-title">Title</Label>
-                <Input id="edit-title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-amount">Amount ($)</Label>
-                <Input id="edit-amount" type="number" min="0" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-date">Date</Label>
-                <Input id="edit-date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
-              </div>
-              <div className="grid gap-2">
-                <Label>Category</Label>
-                <SearchableCombobox options={EXPENSE_CATEGORIES} value={formData.category} onChange={(value) => setFormData({ ...formData, category: value })} placeholder="Select category..." />
-              </div>
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <SearchableCombobox options={[{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }]} value={formData.status} onChange={(value) => setFormData({ ...formData, status: value })} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Receipt</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="hidden"
-                    id="edit-receipt"
-                    onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-                  />
-                  <Button type="button" variant="outline" onClick={() => document.getElementById('edit-receipt')?.click()}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    {receiptFile ? receiptFile.name : 'Upload New Receipt'}
-                  </Button>
-                  {selectedExpense?.receipt_path && !receiptFile && (
-                    <a href={selectedExpense.receipt_path} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
-                      View Current
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={updateExpense.isPending}>{updateExpense.isPending ? 'Saving...' : 'Save Changes'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

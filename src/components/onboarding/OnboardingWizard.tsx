@@ -16,10 +16,15 @@ import {
   Sparkles,
   Search,
   Moon,
-  LayoutGrid
+  LayoutGrid,
+  MessageSquare,
+  Home,
+  Bell,
+  Upload
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface OnboardingStep {
   id: string;
@@ -27,9 +32,10 @@ interface OnboardingStep {
   description: string;
   icon: React.ElementType;
   tips: string[];
+  pointer?: string; // CSS selector or description of where to point
 }
 
-const steps: OnboardingStep[] = [
+const teamSteps: OnboardingStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to Soomro Law Services',
@@ -40,7 +46,8 @@ const steps: OnboardingStep[] = [
       'Track payments and invoices efficiently',
       'Schedule and manage appointments',
       'AI-powered insights and analytics'
-    ]
+    ],
+    pointer: 'sidebar'
   },
   {
     id: 'clients',
@@ -52,7 +59,8 @@ const steps: OnboardingStep[] = [
       'View all client data in one unified profile',
       'Link clients to their user accounts',
       'Use drag-and-drop to change client status'
-    ]
+    ],
+    pointer: 'Clients menu item in sidebar'
   },
   {
     id: 'cases',
@@ -64,7 +72,8 @@ const steps: OnboardingStep[] = [
       'Use Kanban board for visual case management',
       'Track case activities and timeline',
       'Assign cases to team members'
-    ]
+    ],
+    pointer: 'Cases menu item in sidebar'
   },
   {
     id: 'shortcuts',
@@ -76,7 +85,8 @@ const steps: OnboardingStep[] = [
       'Double-click any cell to edit inline',
       'Drag status pills to update records',
       'Use Tab to navigate between fields'
-    ]
+    ],
+    pointer: 'Search bar in header'
   },
   {
     id: 'theme',
@@ -88,7 +98,8 @@ const steps: OnboardingStep[] = [
       'Access settings for notifications',
       'Configure your profile and preferences',
       'Set up security PIN for sensitive areas'
-    ]
+    ],
+    pointer: 'Theme toggle in header'
   },
   {
     id: 'complete',
@@ -104,15 +115,97 @@ const steps: OnboardingStep[] = [
   }
 ];
 
+const clientSteps: OnboardingStep[] = [
+  {
+    id: 'welcome',
+    title: 'Welcome to Your Client Portal',
+    description: 'Access all your legal matters, documents, and communication in one secure place.',
+    icon: Sparkles,
+    tips: [
+      'View your active cases and their status',
+      'Access and download your documents',
+      'Communicate with your legal team',
+      'Book and manage appointments'
+    ],
+    pointer: 'dashboard'
+  },
+  {
+    id: 'cases',
+    title: 'Your Cases',
+    description: 'Track the progress of all your legal matters in real-time.',
+    icon: Briefcase,
+    tips: [
+      'View case status and updates',
+      'See timeline of case activities',
+      'Access related documents',
+      'Track important deadlines'
+    ],
+    pointer: 'Cases section'
+  },
+  {
+    id: 'documents',
+    title: 'Document Access',
+    description: 'Securely access all documents related to your cases.',
+    icon: FileText,
+    tips: [
+      'Download documents anytime',
+      'Upload required documents',
+      'View document history',
+      'Organized by case and category'
+    ],
+    pointer: 'Documents section'
+  },
+  {
+    id: 'messaging',
+    title: 'Communication',
+    description: 'Stay connected with your legal team through secure messaging.',
+    icon: MessageSquare,
+    tips: [
+      'Send messages to your assigned team',
+      'Receive updates on your cases',
+      'Ask questions anytime',
+      'All communications are secure'
+    ],
+    pointer: 'Messages section'
+  },
+  {
+    id: 'appointments',
+    title: 'Schedule Appointments',
+    description: 'Easily book and manage meetings with your legal team.',
+    icon: Calendar,
+    tips: [
+      'View available time slots',
+      'Book consultations online',
+      'Receive reminders before appointments',
+      'Reschedule when needed'
+    ],
+    pointer: 'Appointments section'
+  },
+  {
+    id: 'complete',
+    title: 'You\'re Ready!',
+    description: 'Your portal is ready to use. We\'re here to help with your legal needs.',
+    icon: Check,
+    tips: [
+      'Check your dashboard regularly',
+      'Keep your contact info updated',
+      'Upload documents as requested',
+      'Contact us if you need assistance'
+    ]
+  }
+];
+
 interface OnboardingWizardProps {
   onComplete: () => void;
+  isClient?: boolean;
 }
 
-export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+export function OnboardingWizard({ onComplete, isClient = false }: OnboardingWizardProps) {
   const [open, setOpen] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const { user } = useAuth();
 
+  const steps = isClient ? clientSteps : teamSteps;
   const step = steps[currentStep];
   const progress = ((currentStep + 1) / steps.length) * 100;
   const isLastStep = currentStep === steps.length - 1;
@@ -134,7 +227,14 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   const handleComplete = () => {
     setOpen(false);
-    localStorage.setItem('onboarding_completed', 'true');
+    // Store in user preferences in database
+    if (user?.id) {
+      supabase.from('user_preferences').upsert({
+        user_id: user.id,
+        preference_key: 'onboarding_completed',
+        preference_value: true,
+      }, { onConflict: 'user_id,preference_key' });
+    }
     onComplete();
   };
 
@@ -249,4 +349,52 @@ export function useOnboarding() {
   };
 
   return { showOnboarding, setShowOnboarding, resetOnboarding };
+}
+
+export function useOnboardingForUser(userId: string | undefined, isClient: boolean = false) {
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
+
+    const checkOnboardingStatus = async () => {
+      try {
+        const { data } = await supabase
+          .from('user_preferences')
+          .select('preference_value')
+          .eq('user_id', userId)
+          .eq('preference_key', 'onboarding_completed')
+          .maybeSingle();
+
+        if (!data || !data.preference_value) {
+          // Delay showing to let the app render first
+          setTimeout(() => setShowOnboarding(true), 1000);
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, [userId]);
+
+  const resetOnboarding = async () => {
+    if (!userId) return;
+    
+    await supabase
+      .from('user_preferences')
+      .delete()
+      .eq('user_id', userId)
+      .eq('preference_key', 'onboarding_completed');
+    
+    setShowOnboarding(true);
+  };
+
+  return { showOnboarding, setShowOnboarding, resetOnboarding, isLoading };
 }

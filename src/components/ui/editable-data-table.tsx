@@ -9,6 +9,9 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { 
   Search, 
   ChevronLeft, 
@@ -20,6 +23,8 @@ import {
   ArrowDown,
   Pencil,
   Check,
+  X,
+  Edit3,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -35,6 +40,7 @@ export interface EditableColumn<T> {
   editType?: 'text' | 'select' | 'email' | 'tel' | 'status';
   options?: { value: string; label: string; color?: string }[];
   render?: (row: T, isEditing: boolean) => React.ReactNode;
+  bulkEditable?: boolean; // Can this field be bulk edited
 }
 
 interface EditableDataTableProps<T> {
@@ -52,6 +58,7 @@ interface EditableDataTableProps<T> {
   selectedIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
   isUpdating?: boolean;
+  onBulkUpdate?: (ids: string[], updates: Record<string, string>) => Promise<void>;
 }
 
 export function EditableDataTable<T extends { id: string }>({
@@ -69,6 +76,7 @@ export function EditableDataTable<T extends { id: string }>({
   selectedIds = [],
   onSelectionChange,
   isUpdating = false,
+  onBulkUpdate,
 }: EditableDataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,6 +84,10 @@ export function EditableDataTable<T extends { id: string }>({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingCell, setEditingCell] = useState<{ rowId: string; key: string; colIndex: number; rowIndex: number } | null>(null);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+  const [bulkEditField, setBulkEditField] = useState<string>('');
+  const [bulkEditValue, setBulkEditValue] = useState<string>('');
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   // Build editable columns index for navigation
   const editableColumnIndices = useMemo(() => 
@@ -87,14 +99,23 @@ export function EditableDataTable<T extends { id: string }>({
     }, [] as number[]),
   [columns]);
 
+  // Get bulk editable columns
+  const bulkEditableColumns = useMemo(() => 
+    columns.filter(col => col.bulkEditable || col.editType === 'status' || col.editType === 'select'),
+  [columns]);
+
+  const selectedBulkColumn = useMemo(() => 
+    columns.find(col => col.key === bulkEditField),
+  [columns, bulkEditField]);
+
   const handleSelectAll = () => {
     if (!onSelectionChange) return;
-    const allIds = data.map(item => item.id);
+    const allIds = paginatedData.map(item => item.id);
     const allSelected = allIds.every(id => selectedIds.includes(id));
     if (allSelected) {
-      onSelectionChange([]);
+      onSelectionChange(selectedIds.filter(id => !allIds.includes(id)));
     } else {
-      onSelectionChange(allIds);
+      onSelectionChange([...new Set([...selectedIds, ...allIds])]);
     }
   };
 
@@ -104,6 +125,24 @@ export function EditableDataTable<T extends { id: string }>({
       onSelectionChange(selectedIds.filter(i => i !== id));
     } else {
       onSelectionChange([...selectedIds, id]);
+    }
+  };
+
+  const handleBulkEdit = async () => {
+    if (!onBulkUpdate || !bulkEditField || selectedIds.length === 0) return;
+    
+    setIsBulkUpdating(true);
+    try {
+      await onBulkUpdate(selectedIds, { [bulkEditField]: bulkEditValue });
+      toast({ title: 'Bulk Update', description: `Updated ${selectedIds.length} records successfully` });
+      setIsBulkEditOpen(false);
+      setBulkEditField('');
+      setBulkEditValue('');
+      onSelectionChange?.([]);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update records', variant: 'destructive' });
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -333,6 +372,17 @@ export function EditableDataTable<T extends { id: string }>({
               )}
             </Button>
           )}
+          {selectable && selectedIds.length > 0 && onBulkUpdate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsBulkEditOpen(true)}
+              className="border-primary text-primary hover:bg-primary/10"
+            >
+              <Edit3 className="h-4 w-4 mr-2" />
+              Bulk Edit ({selectedIds.length})
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={handleExportPDF}>
             <Download className="h-4 w-4 mr-2" />
             PDF
@@ -349,7 +399,21 @@ export function EditableDataTable<T extends { id: string }>({
         <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-2 text-sm flex items-center gap-2">
           <Pencil className="h-4 w-4 text-primary" />
           <span className="text-primary font-medium">Edit Mode Active</span>
-          <span className="text-muted-foreground">- Click any field to edit, drag status pills to update</span>
+          <span className="text-muted-foreground">- Double-click any field to edit, drag status pills to update</span>
+        </div>
+      )}
+
+      {/* Selection indicator */}
+      {selectable && selectedIds.length > 0 && (
+        <div className="bg-accent/10 border border-accent/30 rounded-lg px-4 py-2 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-accent" />
+            <span className="text-accent font-medium">{selectedIds.length} item(s) selected</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => onSelectionChange?.([])}>
+            <X className="h-4 w-4 mr-1" />
+            Clear
+          </Button>
         </div>
       )}
 
@@ -498,6 +562,66 @@ export function EditableDataTable<T extends { id: string }>({
           </div>
         </div>
       )}
+
+      {/* Bulk Edit Dialog */}
+      <Dialog open={isBulkEditOpen} onOpenChange={setIsBulkEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Edit {selectedIds.length} Records</DialogTitle>
+            <DialogDescription>
+              Select a field and value to update all selected records at once.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Field to Update</Label>
+              <SearchableCombobox
+                options={bulkEditableColumns.map(col => ({
+                  value: col.key as string,
+                  label: col.header,
+                }))}
+                value={bulkEditField}
+                onChange={(val) => {
+                  setBulkEditField(val);
+                  setBulkEditValue('');
+                }}
+                placeholder="Select field..."
+              />
+            </div>
+            
+            {bulkEditField && selectedBulkColumn && (
+              <div className="space-y-2">
+                <Label>New Value</Label>
+                {selectedBulkColumn.options ? (
+                  <SearchableCombobox
+                    options={selectedBulkColumn.options}
+                    value={bulkEditValue}
+                    onChange={setBulkEditValue}
+                    placeholder="Select value..."
+                  />
+                ) : (
+                  <Input
+                    value={bulkEditValue}
+                    onChange={(e) => setBulkEditValue(e.target.value)}
+                    placeholder="Enter new value..."
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBulkEdit} 
+              disabled={!bulkEditField || !bulkEditValue || isBulkUpdating}
+            >
+              {isBulkUpdating ? 'Updating...' : `Update ${selectedIds.length} Records`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

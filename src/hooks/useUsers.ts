@@ -144,3 +144,28 @@ export function useUpdateUserRole() {
     },
   });
 }
+
+export function useUpdateUserProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, ...updates }: { userId: string; [key: string]: string | null }) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({ title: 'User profile updated successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating user profile', description: error.message, variant: 'destructive' });
+    },
+  });
+}
