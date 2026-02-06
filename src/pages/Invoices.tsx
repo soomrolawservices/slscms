@@ -69,6 +69,13 @@ export default function Invoices() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithRelations | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleBulkUpdate = async (ids: string[], updates: Record<string, string>) => {
+    for (const id of ids) {
+      await updateInvoice.mutateAsync({ id, ...updates });
+    }
+  };
 
   const [formData, setFormData] = useState({
     client_id: '',
@@ -145,6 +152,7 @@ export default function Invoices() {
       header: 'Status',
       editable: true,
       editType: 'status',
+      bulkEditable: true,
       options: [
         { value: 'unpaid', label: 'Unpaid' },
         { value: 'paid', label: 'Paid' },
@@ -388,6 +396,10 @@ export default function Invoices() {
             isLoading={isLoading}
             onUpdate={handleInlineUpdate}
             isUpdating={updateInvoice.isPending}
+            selectable
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onBulkUpdate={handleBulkUpdate}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

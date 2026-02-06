@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, FileText, Clock, CheckCircle, AlertTriangle, TrendingUp, DollarSign } from 'lucide-react';
-import { useITRFiscalYears, useITRDashboardStats, useCreateFiscalYear } from '@/hooks/useITRPortal';
+import { Plus, Users, FileText, Clock, CheckCircle, AlertTriangle, TrendingUp, DollarSign, Target, Zap, Calendar, BarChart2 } from 'lucide-react';
+import { useITRFiscalYears, useITRDashboardStats, useCreateFiscalYear, useITRPortalEnabled } from '@/hooks/useITRPortal';
 import { KpiCard } from '@/components/ui/kpi-card';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import {
@@ -12,9 +12,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { differenceInDays, format, parseISO } from 'date-fns';
+import { Navigate } from 'react-router-dom';
 
 const PROGRESS_COLORS = {
   pending: '#94a3b8',
@@ -26,6 +30,7 @@ const PROGRESS_COLORS = {
 
 export default function ITRDashboard() {
   const { data: fiscalYears = [] } = useITRFiscalYears();
+  const { data: itrEnabled, isLoading: itrLoading } = useITRPortalEnabled();
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [showNewYear, setShowNewYear] = useState(false);
   const [newYear, setNewYear] = useState({ label: '', start: '', end: '' });
@@ -33,6 +38,65 @@ export default function ITRDashboard() {
 
   const fiscalYearId = selectedYear === 'all' ? undefined : selectedYear;
   const { data: stats } = useITRDashboardStats(fiscalYearId);
+
+  // Get selected fiscal year details for deadline calculations
+  const selectedFiscalYear = fiscalYears.find(fy => fy.id === selectedYear);
+
+  // Redirect if ITR Portal is disabled (after hooks)
+  if (!itrLoading && itrEnabled === false) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  // Calculate deadline stats
+  const calculateDeadlineStats = () => {
+    if (!selectedFiscalYear || !stats) return null;
+
+    const today = new Date();
+    const startDate = parseISO(selectedFiscalYear.start_date);
+    const endDate = parseISO(selectedFiscalYear.end_date);
+    
+    const totalDays = differenceInDays(endDate, startDate);
+    const daysSpent = Math.max(0, differenceInDays(today, startDate));
+    const daysLeft = Math.max(0, differenceInDays(endDate, today));
+    
+    const totalReturns = stats.totalClients;
+    const filedReturns = stats.filed;
+    const remainingReturns = totalReturns - filedReturns;
+    
+    // Speed calculations
+    const currentSpeed = daysSpent > 0 ? (filedReturns / daysSpent) : 0;
+    const requiredSpeed = daysLeft > 0 ? (remainingReturns / daysLeft) : 0;
+    
+    // Expected filing at current speed
+    const expectedFiledByDeadline = Math.min(
+      totalReturns,
+      filedReturns + Math.floor(currentSpeed * daysLeft)
+    );
+    
+    // Probability of meeting deadline (simple calculation)
+    let probability = 100;
+    if (remainingReturns > 0 && daysLeft > 0) {
+      probability = Math.min(100, Math.round((currentSpeed / requiredSpeed) * 100));
+    } else if (remainingReturns > 0 && daysLeft === 0) {
+      probability = 0;
+    }
+    
+    return {
+      deadline: format(endDate, 'MMM d, yyyy'),
+      totalDays,
+      daysSpent,
+      daysLeft,
+      currentSpeed: currentSpeed.toFixed(2),
+      requiredSpeed: requiredSpeed.toFixed(2),
+      expectedFiling: expectedFiledByDeadline,
+      probability,
+      filedReturns,
+      totalReturns,
+      remainingReturns
+    };
+  };
+
+  const deadlineStats = calculateDeadlineStats();
 
   const progressData = stats ? [
     { name: 'Pending', value: stats.progressDistribution.pending, color: PROGRESS_COLORS.pending },
@@ -73,7 +137,7 @@ export default function ITRDashboard() {
 
       {/* Year Filter */}
       <Tabs value={selectedYear} onValueChange={setSelectedYear}>
-        <TabsList className="border-2 border-border">
+        <TabsList className="border-2 border-border flex-wrap h-auto">
           <TabsTrigger value="all">All Time</TabsTrigger>
           {fiscalYears.map(fy => (
             <TabsTrigger key={fy.id} value={fy.id}>{fy.year_label}</TabsTrigger>
@@ -106,6 +170,70 @@ export default function ITRDashboard() {
             />
           </div>
 
+          {/* Deadline Stats - Only show when specific year is selected */}
+          {deadlineStats && selectedYear !== 'all' && (
+            <Card className="border-2 border-border bg-gradient-to-br from-primary/5 to-accent/5">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-primary" />
+                  Deadline Tracking - {selectedFiscalYear?.year_label}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                  <div className="text-center p-3 rounded-lg bg-background border border-border">
+                    <Calendar className="h-5 w-5 mx-auto mb-1 text-primary" />
+                    <p className="text-lg font-bold">{deadlineStats.deadline}</p>
+                    <p className="text-xs text-muted-foreground">Deadline</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-background border border-border">
+                    <Clock className="h-5 w-5 mx-auto mb-1 text-amber-500" />
+                    <p className="text-lg font-bold">{deadlineStats.daysLeft}</p>
+                    <p className="text-xs text-muted-foreground">Days Left</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-background border border-border">
+                    <BarChart2 className="h-5 w-5 mx-auto mb-1 text-blue-500" />
+                    <p className="text-lg font-bold">{deadlineStats.daysSpent}</p>
+                    <p className="text-xs text-muted-foreground">Days Spent</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-background border border-border">
+                    <Zap className="h-5 w-5 mx-auto mb-1 text-green-500" />
+                    <p className="text-lg font-bold">{deadlineStats.currentSpeed}</p>
+                    <p className="text-xs text-muted-foreground">Returns/Day</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-background border border-border">
+                    <TrendingUp className="h-5 w-5 mx-auto mb-1 text-purple-500" />
+                    <p className="text-lg font-bold">{deadlineStats.requiredSpeed}</p>
+                    <p className="text-xs text-muted-foreground">Required Speed</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-background border border-border">
+                    <Target className="h-5 w-5 mx-auto mb-1 text-accent" />
+                    <p className="text-lg font-bold">{deadlineStats.expectedFiling}/{deadlineStats.totalReturns}</p>
+                    <p className="text-xs text-muted-foreground">Expected Filing</p>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Filing Progress: {deadlineStats.filedReturns}/{deadlineStats.totalReturns}</span>
+                    <span className={deadlineStats.probability >= 70 ? 'text-green-500' : deadlineStats.probability >= 40 ? 'text-amber-500' : 'text-red-500'}>
+                      {deadlineStats.probability}% chance of meeting deadline
+                    </span>
+                  </div>
+                  <Progress 
+                    value={(deadlineStats.filedReturns / Math.max(1, deadlineStats.totalReturns)) * 100} 
+                    className="h-3"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Time elapsed: {Math.round((deadlineStats.daysSpent / Math.max(1, deadlineStats.totalDays)) * 100)}%</span>
+                    <span>{deadlineStats.remainingReturns} returns remaining</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Revenue Card */}
           <Card className="border-2 border-border">
             <CardHeader className="border-b border-border">
@@ -117,15 +245,15 @@ export default function ITRDashboard() {
             <CardContent className="pt-6">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-3xl font-bold text-primary">PKR {(stats?.totalRevenue || 0).toLocaleString()}</p>
+                  <p className="text-2xl md:text-3xl font-bold text-primary">PKR {(stats?.totalRevenue || 0).toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-green-500">{stats?.paid || 0}</p>
+                  <p className="text-2xl md:text-3xl font-bold text-green-500">{stats?.paid || 0}</p>
                   <p className="text-sm text-muted-foreground">Paid</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-amber-500">{stats?.unpaid || 0}</p>
+                  <p className="text-2xl md:text-3xl font-bold text-amber-500">{stats?.unpaid || 0}</p>
                   <p className="text-sm text-muted-foreground">Unpaid</p>
                 </div>
               </div>
@@ -191,6 +319,9 @@ export default function ITRDashboard() {
         <DialogContent className="border-2 border-border">
           <DialogHeader>
             <DialogTitle>Create New Fiscal Year</DialogTitle>
+            <DialogDescription>
+              Define the fiscal year period for ITR filings. The start and end dates will be used to calculate deadline tracking metrics.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -209,14 +340,16 @@ export default function ITRDashboard() {
                   value={newYear.start}
                   onChange={(e) => setNewYear({ ...newYear, start: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">Filing period start</p>
               </div>
               <div className="grid gap-2">
-                <Label>End Date</Label>
+                <Label>End Date (Deadline)</Label>
                 <Input
                   type="date"
                   value={newYear.end}
                   onChange={(e) => setNewYear({ ...newYear, end: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">Filing deadline</p>
               </div>
             </div>
           </div>
