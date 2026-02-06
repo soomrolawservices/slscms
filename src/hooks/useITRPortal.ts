@@ -142,17 +142,35 @@ export function useCreateITRReturn() {
       assigned_to?: string;
       title?: string;
     }) => {
+      // First check if client already has a return for this fiscal year
+      const { data: existingReturn } = await supabase
+        .from('itr_returns')
+        .select('id')
+        .eq('client_id', data.client_id)
+        .eq('fiscal_year_id', data.fiscal_year_id)
+        .maybeSingle();
+
+      if (existingReturn) {
+        throw new Error('This client already has a return for this fiscal year');
+      }
+
       const { data: result, error } = await supabase
         .from('itr_returns')
         .insert({ ...data, created_by: user?.id })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('This client already has a return for this fiscal year');
+        }
+        throw error;
+      }
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['itr-returns'] });
+      queryClient.invalidateQueries({ queryKey: ['itr-dashboard-stats'] });
       toast({ title: 'ITR Return created successfully' });
     },
     onError: (error: Error) => {

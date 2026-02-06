@@ -1,26 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { 
   Users, 
   Briefcase, 
   FileText, 
-  CreditCard, 
   Calendar, 
-  Settings,
   ChevronRight,
   ChevronLeft,
   Check,
   Sparkles,
   Search,
   Moon,
-  LayoutGrid,
   MessageSquare,
-  Home,
-  Bell,
-  Upload
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,7 +24,7 @@ interface OnboardingStep {
   description: string;
   icon: React.ElementType;
   tips: string[];
-  pointer?: string; // CSS selector or description of where to point
+  pointer?: string;
 }
 
 const teamSteps: OnboardingStep[] = [
@@ -225,15 +217,19 @@ export function OnboardingWizard({ onComplete, isClient = false }: OnboardingWiz
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setOpen(false);
     // Store in user preferences in database
     if (user?.id) {
-      supabase.from('user_preferences').upsert({
-        user_id: user.id,
-        preference_key: 'onboarding_completed',
-        preference_value: true,
-      }, { onConflict: 'user_id,preference_key' });
+      try {
+        await supabase.from('user_preferences').upsert({
+          user_id: user.id,
+          preference_key: 'onboarding_completed',
+          preference_value: JSON.stringify(true),
+        }, { onConflict: 'user_id,preference_key' });
+      } catch (error) {
+        console.error('Error saving onboarding preference:', error);
+      }
     }
     onComplete();
   };
@@ -337,7 +333,6 @@ export function useOnboarding() {
   useEffect(() => {
     const completed = localStorage.getItem('onboarding_completed');
     if (!completed) {
-      // Delay showing to let the app render first
       const timer = setTimeout(() => setShowOnboarding(true), 1000);
       return () => clearTimeout(timer);
     }
@@ -354,26 +349,42 @@ export function useOnboarding() {
 export function useOnboardingForUser(userId: string | undefined, isClient: boolean = false) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    if (!userId) {
+    if (!userId || hasChecked) {
       setIsLoading(false);
       return;
     }
 
     const checkOnboardingStatus = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('user_preferences')
           .select('preference_value')
           .eq('user_id', userId)
           .eq('preference_key', 'onboarding_completed')
           .maybeSingle();
 
-        if (!data || !data.preference_value) {
-          // Delay showing to let the app render first
+        if (error) {
+          console.error('Error checking onboarding:', error);
+          setIsLoading(false);
+          setHasChecked(true);
+          return;
+        }
+
+        // Check if preference exists and is truthy
+        // preference_value is JSONB, so it could be true, "true", or { value: true }
+        const isCompleted = data?.preference_value === true || 
+                           data?.preference_value === 'true' ||
+                           (typeof data?.preference_value === 'string' && data.preference_value.includes('true'));
+
+        if (!isCompleted) {
+          // Only show after delay to let app render
           setTimeout(() => setShowOnboarding(true), 1000);
         }
+        
+        setHasChecked(true);
       } catch (error) {
         console.error('Error checking onboarding status:', error);
       } finally {
@@ -382,7 +393,7 @@ export function useOnboardingForUser(userId: string | undefined, isClient: boole
     };
 
     checkOnboardingStatus();
-  }, [userId]);
+  }, [userId, hasChecked]);
 
   const resetOnboarding = async () => {
     if (!userId) return;
@@ -393,6 +404,7 @@ export function useOnboardingForUser(userId: string | undefined, isClient: boole
       .eq('user_id', userId)
       .eq('preference_key', 'onboarding_completed');
     
+    setHasChecked(false);
     setShowOnboarding(true);
   };
 

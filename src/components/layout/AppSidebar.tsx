@@ -76,7 +76,7 @@ export function AppSidebar() {
   return (
     <aside 
       className={cn(
-        "hidden lg:flex flex-col bg-gradient-to-b from-sidebar to-sidebar/95 transition-all duration-300 shadow-xl sticky top-0 h-screen",
+        "hidden lg:flex flex-col bg-gradient-to-b from-sidebar to-sidebar/95 transition-all duration-300 shadow-xl sticky top-0 h-screen z-40",
         collapsed ? "w-16" : "w-64"
       )}
     >

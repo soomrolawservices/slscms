@@ -59,6 +59,13 @@ export default function Payments() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentWithRelations | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleBulkUpdate = async (ids: string[], updates: Record<string, string>) => {
+    for (const id of ids) {
+      await updatePayment.mutateAsync({ id, ...updates });
+    }
+  };
 
   const handleBulkImport = async (data: Record<string, string>[]) => {
     let successCount = 0;
@@ -173,6 +180,7 @@ export default function Payments() {
       header: 'Status',
       editable: true,
       editType: 'status',
+      bulkEditable: true,
       options: [
         { value: 'pending', label: 'Pending' },
         { value: 'completed', label: 'Completed' },
@@ -287,6 +295,10 @@ export default function Payments() {
             isLoading={isLoading}
             onUpdate={handleInlineUpdate}
             isUpdating={updatePayment.isPending}
+            selectable
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onBulkUpdate={handleBulkUpdate}
             actions={(row) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
