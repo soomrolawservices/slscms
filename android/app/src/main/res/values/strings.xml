@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">slscms</string>
+    <string name="title_activity_main">slscms</string>
+    <string name="package_name">app.lovable.e1ab17bcbb7147e792cb026304b74a81</string>
+    <string name="custom_url_scheme">app.lovable.e1ab17bcbb7147e792cb026304b74a81</string>
+</resources>
