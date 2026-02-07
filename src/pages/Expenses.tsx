@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, useUploadReceipt, type ExpenseData } from '@/hooks/useExpenses';
+import { DataFreshnessIndicator } from '@/components/ui/data-freshness-indicator';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { ExpenseReports } from '@/components/expenses/ExpenseReports';
 import { ExpenseApproval } from '@/components/expenses/ExpenseApproval';
@@ -51,7 +52,8 @@ const STATUS_OPTIONS = [
 ];
 
 export default function Expenses() {
-  const { data: expenses = [], isLoading } = useExpenses();
+  const expensesQuery = useExpenses();
+  const { data: expenses = [], isLoading } = expensesQuery;
   const { isAdmin } = useAuth();
   const createExpense = useCreateExpense();
   const updateExpense = useUpdateExpense();
@@ -202,10 +204,14 @@ export default function Expenses() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Expenses</h1>
-          <p className="text-muted-foreground">Track internal firm expenses and receipts</p>
+          <DataFreshnessIndicator
+            dataUpdatedAt={expensesQuery.dataUpdatedAt}
+            isFetching={expensesQuery.isFetching}
+          />
         </div>
+          <p className="text-muted-foreground">Track internal firm expenses and receipts</p>
         <div className="flex gap-2">
           <Button
             variant={viewMode === 'list' ? 'default' : 'outline'}

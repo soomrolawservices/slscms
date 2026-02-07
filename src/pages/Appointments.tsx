@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useAppointments, useCreateAppointment, useUpdateAppointment, useDeleteAppointment, type AppointmentData } from '@/hooks/useAppointments';
+import { DataFreshnessIndicator } from '@/components/ui/data-freshness-indicator';
 import { useClients } from '@/hooks/useClients';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
@@ -53,7 +54,8 @@ const TYPE_OPTIONS = [
 
 export default function Appointments() {
   const { user } = useAuth();
-  const { data: appointments = [], isLoading } = useAppointments();
+  const appointmentsQuery = useAppointments();
+  const { data: appointments = [], isLoading } = appointmentsQuery;
   const { data: clients = [] } = useClients();
   const { data: teamMembers = [] } = useTeamMembers();
   const createAppointment = useCreateAppointment();
@@ -244,14 +246,18 @@ export default function Appointments() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
             Appointments
           </h1>
+          <DataFreshnessIndicator
+            dataUpdatedAt={appointmentsQuery.dataUpdatedAt}
+            isFetching={appointmentsQuery.isFetching}
+          />
+        </div>
           <p className="text-muted-foreground">
             Manage your schedule and meetings
           </p>
-        </div>
         <div className="flex items-center gap-2">
           {/* View Toggle */}
           <div className="flex rounded-lg border border-border overflow-hidden">

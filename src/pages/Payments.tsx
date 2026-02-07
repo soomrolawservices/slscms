@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { usePayments, useCreatePayment, useUpdatePayment, useDeletePayment } from '@/hooks/usePayments';
+import { DataFreshnessIndicator } from '@/components/ui/data-freshness-indicator';
 import { useClients } from '@/hooks/useClients';
 import { useCases } from '@/hooks/useCases';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
@@ -45,7 +46,8 @@ interface PaymentWithRelations {
 }
 
 export default function Payments() {
-  const { data: payments = [], isLoading } = usePayments();
+  const paymentsQuery = usePayments();
+  const { data: payments = [], isLoading } = paymentsQuery;
   const { data: clients = [] } = useClients();
   const { data: cases = [] } = useCases();
   const createPayment = useCreatePayment();
@@ -254,10 +256,14 @@ export default function Payments() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pr-24">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Payments</h1>
-          <p className="text-muted-foreground">Track payment records and transactions</p>
+          <DataFreshnessIndicator
+            dataUpdatedAt={paymentsQuery.dataUpdatedAt}
+            isFetching={paymentsQuery.isFetching}
+          />
         </div>
+          <p className="text-muted-foreground">Track payment records and transactions</p>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />

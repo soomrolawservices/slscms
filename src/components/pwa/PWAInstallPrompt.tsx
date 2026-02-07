@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Download, X, Wifi, WifiOff } from 'lucide-react';
+import { Download, X, Wifi, WifiOff, CloudOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { offlineQueue } from '@/lib/offline-queue';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -12,6 +13,7 @@ export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingCount, setPendingCount] = useState(offlineQueue.getPendingCount());
 
   useEffect(() => {
     const handleBeforeInstall = (e: Event) => {
@@ -41,10 +43,15 @@ export function PWAInstallPrompt() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    const unsubscribe = offlineQueue.subscribe(() => {
+      setPendingCount(offlineQueue.getPendingCount());
+    });
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      unsubscribe();
     };
   }, []);
 
@@ -71,6 +78,12 @@ export function PWAInstallPrompt() {
         <div className="fixed top-0 left-0 right-0 z-[100] bg-destructive text-destructive-foreground text-center py-1.5 text-sm font-medium flex items-center justify-center gap-2">
           <WifiOff className="h-4 w-4" />
           You are offline — using cached data
+          {pendingCount > 0 && (
+            <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive-foreground/20 text-xs">
+              <CloudOff className="h-3 w-3" />
+              {pendingCount} pending
+            </span>
+          )}
         </div>
       )}
 
