@@ -10,6 +10,8 @@ import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { OnboardingWizard, useOnboardingForUser } from "@/components/onboarding/OnboardingWizard";
 import { VoiceFAB } from "@/components/voice/VoiceFAB";
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -44,15 +46,28 @@ import ITRDashboard from "./pages/itr/ITRDashboard";
 import ITRClients from "./pages/itr/ITRClients";
 import ITRExtensions from "./pages/itr/ITRExtensions";
 
-const queryClient = new QueryClient();
-
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes - keep cache longer for offline
+      retry: (failureCount, error) => {
+        // Don't retry if offline
+        if (!navigator.onLine) return false;
+        return failureCount < 3;
+      },
+    },
+  },
+});
 function AppContent() {
   const { user, userRole, isAuthenticated } = useAuth();
   const isClient = userRole === 'client';
   const { showOnboarding, setShowOnboarding } = useOnboardingForUser(user?.id, isClient);
+  useOfflineSync();
 
   return (
     <>
+      <PWAInstallPrompt />
       {showOnboarding && isAuthenticated && (
         <OnboardingWizard 
           onComplete={() => setShowOnboarding(false)} 
