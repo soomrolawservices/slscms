@@ -122,7 +122,7 @@ export function MobileNav() {
       </header>
 
       {/* Bottom Navigation - Compact Android-style */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-40 safe-area-inset-bottom">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-40 safe-area-inset-bottom" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="flex items-center justify-around py-0.5">
           {/* Dynamic tabs from user preferences */}
           {visibleTabs.map((item) => (

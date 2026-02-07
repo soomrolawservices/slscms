@@ -12,6 +12,7 @@ import { OnboardingWizard, useOnboardingForUser } from "@/components/onboarding/
 import { VoiceFAB } from "@/components/voice/VoiceFAB";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { usePrefetchCriticalData } from "@/hooks/usePrefetchCriticalData";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -64,6 +65,7 @@ function AppContent() {
   const isClient = userRole === 'client';
   const { showOnboarding, setShowOnboarding } = useOnboardingForUser(user?.id, isClient);
   useOfflineSync();
+  usePrefetchCriticalData();
 
   return (
     <>

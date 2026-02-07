@@ -31,6 +31,7 @@ import { useDocuments, useUploadDocument, useDeleteDocument, useDownloadDocument
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { BulkImportDialog } from '@/components/bulk-import/BulkImportDialog';
+import { DataFreshnessIndicator } from '@/components/ui/data-freshness-indicator';
 
 function formatFileSize(bytes: number): string {
   if (!bytes) return '0 B';
@@ -95,7 +96,8 @@ export default function Documents() {
 
   const { data: clients = [] } = useClients();
   const { data: cases = [] } = useCases();
-  const { data: documents = [], isLoading } = useDocuments();
+  const documentsQuery = useDocuments();
+  const { data: documents = [], isLoading } = documentsQuery;
   const uploadDocument = useUploadDocument();
   const deleteDocument = useDeleteDocument();
   const downloadDocument = useDownloadDocument();
@@ -185,14 +187,18 @@ export default function Documents() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Documents
           </h1>
+          <DataFreshnessIndicator
+            dataUpdatedAt={documentsQuery.dataUpdatedAt}
+            isFetching={documentsQuery.isFetching}
+          />
+        </div>
           <p className="text-muted-foreground">
             Manage client documents and files
           </p>
-        </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
             <FileUp className="h-4 w-4 mr-2" />

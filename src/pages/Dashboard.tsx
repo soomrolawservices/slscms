@@ -16,6 +16,7 @@ import { ExpenseBreakdownChart } from '@/components/dashboard/ExpenseBreakdownCh
 import { FinancialSummaryCards } from '@/components/dashboard/FinancialSummaryCards';
 import { UnassignedCounters } from '@/components/dashboard/UnassignedCounters';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
+import { DataFreshnessIndicator } from '@/components/ui/data-freshness-indicator';
 import { useState } from 'react';
 
 export default function Dashboard() {
@@ -24,7 +25,8 @@ export default function Dashboard() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showAssistant, setShowAssistant] = useState(false);
   
-  const { data: clients = [] } = useClients();
+  const clientsQuery = useClients();
+  const { data: clients = [] } = clientsQuery;
   const { data: cases = [] } = useCases();
   const { data: appointments = [] } = useAppointments();
   const { data: payments = [] } = usePayments();
@@ -49,14 +51,18 @@ export default function Dashboard() {
     <div className="space-y-6 pb-20 lg:pb-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             {isAdmin ? 'Admin Dashboard' : 'My Dashboard'}
           </h1>
+          <DataFreshnessIndicator
+            dataUpdatedAt={clientsQuery.dataUpdatedAt}
+            isFetching={clientsQuery.isFetching}
+          />
+        </div>
           <p className="text-muted-foreground mt-1">
             Welcome back, <span className="font-medium text-foreground">{profile?.name}</span>
           </p>
-        </div>
         <div className="flex flex-wrap items-center gap-2">
           {isAdmin && (
             <>

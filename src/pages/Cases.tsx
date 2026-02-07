@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useCases, useCreateCase, useUpdateCase, useDeleteCase } from '@/hooks/useCases';
+import { DataFreshnessIndicator } from '@/components/ui/data-freshness-indicator';
 import { useClients } from '@/hooks/useClients';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
@@ -50,7 +51,8 @@ interface CaseWithClient {
 
 export default function Cases() {
   const { isAdmin } = useAuth();
-  const { data: cases = [], isLoading } = useCases();
+  const casesQuery = useCases();
+  const { data: cases = [], isLoading } = casesQuery;
   const { data: clients = [] } = useClients();
   const createCase = useCreateCase();
   const updateCase = useUpdateCase();
@@ -225,14 +227,18 @@ export default function Cases() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
             {isAdmin ? 'Cases' : 'My Cases'}
           </h1>
+          <DataFreshnessIndicator
+            dataUpdatedAt={casesQuery.dataUpdatedAt}
+            isFetching={casesQuery.isFetching}
+          />
+        </div>
           <p className="text-muted-foreground">
             Manage legal cases and matters
           </p>
-        </div>
         <div className="flex gap-2">
           {isAdmin && (
             <BulkAssignment

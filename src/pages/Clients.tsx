@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, type ClientData } from '@/hooks/useClients';
+import { DataFreshnessIndicator } from '@/components/ui/data-freshness-indicator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
@@ -40,7 +41,8 @@ import { toast } from '@/hooks/use-toast';
 export default function Clients() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
-  const { data: clients = [], isLoading } = useClients();
+  const clientsQuery = useClients();
+  const { data: clients = [], isLoading } = clientsQuery;
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
@@ -222,14 +224,18 @@ export default function Clients() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
             {isAdmin ? 'Clients' : 'My Clients'}
           </h1>
+          <DataFreshnessIndicator
+            dataUpdatedAt={clientsQuery.dataUpdatedAt}
+            isFetching={clientsQuery.isFetching}
+          />
+        </div>
           <p className="text-muted-foreground">
             Manage your client database
           </p>
-        </div>
         <div className="flex gap-2">
           {isAdmin && (
             <BulkAssignment

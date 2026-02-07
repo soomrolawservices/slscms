@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice } from '@/hooks/useInvoices';
+import { DataFreshnessIndicator } from '@/components/ui/data-freshness-indicator';
 import { useInvoiceLineItems, useCreateLineItems, LineItem } from '@/hooks/useInvoiceLineItems';
 import { useClients } from '@/hooks/useClients';
 import { useCases } from '@/hooks/useCases';
@@ -54,7 +55,8 @@ interface InvoiceWithRelations {
 
 export default function Invoices() {
   const { isAdmin } = useAuth();
-  const { data: invoices = [], isLoading } = useInvoices();
+  const invoicesQuery = useInvoices();
+  const { data: invoices = [], isLoading } = invoicesQuery;
   const { data: clients = [] } = useClients();
   const { data: cases = [] } = useCases();
   const createInvoice = useCreateInvoice();
@@ -361,10 +363,14 @@ export default function Invoices() {
     <PinGate title="Invoices" description="Manage billing and invoices">
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pr-24">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Invoices</h1>
-          <p className="text-muted-foreground">Manage billing and invoices</p>
+          <DataFreshnessIndicator
+            dataUpdatedAt={invoicesQuery.dataUpdatedAt}
+            isFetching={invoicesQuery.isFetching}
+          />
         </div>
+          <p className="text-muted-foreground">Manage billing and invoices</p>
         <div className="flex gap-2">
           {isAdmin && (
             <Button variant="outline" onClick={() => setIsImportOpen(true)}>
