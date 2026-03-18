@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { OnboardingWizard, useOnboardingForUser } from "@/components/onboarding/OnboardingWizard";
 import { VoiceFAB } from "@/components/voice/VoiceFAB";
@@ -31,10 +30,6 @@ import Users from "./pages/Users";
 import Permissions from "./pages/Permissions";
 import Settings from "./pages/Settings";
 import Assignments from "./pages/Assignments";
-import ClientPortal from "./pages/ClientPortal";
-import ClientProfile from "./pages/ClientProfile";
-import ClientLogin from "./pages/ClientLogin";
-import ClientSignup from "./pages/ClientSignup";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
 import Messages from "./pages/Messages";
@@ -50,20 +45,19 @@ import ITRExtensions from "./pages/itr/ITRExtensions";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes - keep cache longer for offline
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
       retry: (failureCount, error) => {
-        // Don't retry if offline
         if (!navigator.onLine) return false;
         return failureCount < 3;
       },
     },
   },
 });
+
 function AppContent() {
   const { user, userRole, isAuthenticated } = useAuth();
-  const isClient = userRole === 'client';
-  const { showOnboarding, setShowOnboarding } = useOnboardingForUser(user?.id, isClient);
+  const { showOnboarding, setShowOnboarding } = useOnboardingForUser(user?.id, false);
   useOfflineSync();
   usePrefetchCriticalData();
 
@@ -73,12 +67,12 @@ function AppContent() {
       {showOnboarding && isAuthenticated && (
         <OnboardingWizard 
           onComplete={() => setShowOnboarding(false)} 
-          isClient={isClient}
+          isClient={false}
         />
       )}
       <Toaster />
       <Sonner />
-      {isAuthenticated && !isClient && <VoiceFAB />}
+      {isAuthenticated && <VoiceFAB />}
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -86,17 +80,7 @@ function AppContent() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           
-          {/* Client Portal Auth */}
-          <Route path="/client-login" element={<ClientLogin />} />
-          <Route path="/client-signup" element={<ClientSignup />} />
-          
-          {/* Client Portal - Separate Layout */}
-          <Route element={<ClientPortalLayout />}>
-            <Route path="/portal" element={<ClientPortal />} />
-            <Route path="/portal/profile" element={<ClientProfile />} />
-          </Route>
-          
-          {/* Protected Routes - Admin/Team Only */}
+          {/* Protected Routes */}
           <Route element={<AppLayout />}>
             {/* Pages accessible by both Admin and Team Members */}
             <Route path="/dashboard" element={
@@ -198,6 +182,12 @@ function AppContent() {
               <Route path="extensions" element={<ITRExtensions />} />
             </Route>
           </Route>
+          
+          {/* Redirect old client portal routes */}
+          <Route path="/portal" element={<Navigate to="/login" replace />} />
+          <Route path="/portal/*" element={<Navigate to="/login" replace />} />
+          <Route path="/client-login" element={<Navigate to="/login" replace />} />
+          <Route path="/client-signup" element={<Navigate to="/login" replace />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>

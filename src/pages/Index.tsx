@@ -47,22 +47,16 @@ export default function Index() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Scale className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold">Soomro Law Services
-          </span>
+            <span className="text-xl font-bold">Soomro Law Services</span>
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
             <a href="#benefits" className="text-muted-foreground hover:text-foreground transition-colors">Benefits</a>
             <a href="#contact" className="text-muted-foreground hover:text-foreground transition-colors">Contact</a>
           </nav>
-          <div className="flex items-center gap-2">
-            <Link to="/client-login">
-              <Button variant="ghost">Client Portal</Button>
-            </Link>
-            <Link to="/login">
-              <Button>Staff Login</Button>
-            </Link>
-          </div>
+          <Link to="/login">
+            <Button>Sign In</Button>
+          </Link>
         </div>
       </header>
 
@@ -79,19 +73,12 @@ export default function Index() {
             Streamline your law practice with our comprehensive management system. 
             Handle clients, cases, documents, and billing all in one place.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/login">
-              <Button size="lg" className="text-lg px-8">
-                Get Started
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link to="/client-login">
-              <Button size="lg" variant="outline" className="text-lg px-8">
-                Client Access
-              </Button>
-            </Link>
-          </div>
+          <Link to="/login">
+            <Button size="lg" className="text-lg px-8">
+              Get Started
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
         </div>
       </section>
 
@@ -205,10 +192,7 @@ export default function Index() {
             <p className="text-muted-foreground text-sm">
               © {new Date().getFullYear()} Soomro Law Associates. All rights reserved.
             </p>
-            <div className="flex gap-6">
-              <Link to="/login" className="text-muted-foreground hover:text-foreground text-sm">Staff Login</Link>
-              <Link to="/client-login" className="text-muted-foreground hover:text-foreground text-sm">Client Portal</Link>
-            </div>
+            <Link to="/login" className="text-muted-foreground hover:text-foreground text-sm">Staff Login</Link>
           </div>
         </div>
       </footer>
