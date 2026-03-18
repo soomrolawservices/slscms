@@ -1,7 +1,7 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
-type AllowedRole = 'admin' | 'team_member' | 'client';
+type AllowedRole = 'admin' | 'team_member';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,7 +10,6 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, userRole } = useAuth();
-  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -24,17 +23,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
-  // If user role is not in allowed roles, redirect appropriately
-  if (userRole && !allowedRoles.includes(userRole)) {
-    // Clients should go to portal
-    if (userRole === 'client') {
-      return <Navigate to="/portal" replace />;
-    }
-    // Team members trying to access admin-only pages go to dashboard
+  // If user role is not in allowed roles, redirect to dashboard
+  if (userRole && !allowedRoles.includes(userRole as AllowedRole)) {
     if (userRole === 'team_member') {
       return <Navigate to="/dashboard" replace />;
     }
-    // Admins can access everything, but fallback to dashboard
     return <Navigate to="/dashboard" replace />;
   }
 
