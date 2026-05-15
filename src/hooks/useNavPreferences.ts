@@ -33,6 +33,9 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { id: 'itr', title: 'ITR Portal', url: '/itr', icon: 'Calculator' },
 ];
 
+// Items only available to admin role
+export const ADMIN_ONLY_NAV_IDS = ['invoices', 'credentials', 'assignments', 'reports', 'users'];
+
 export function useNavPreferences() {
   const { user } = useAuth();
   const [selectedTabIds, setSelectedTabIds] = useState<string[]>(DEFAULT_TAB_IDS);

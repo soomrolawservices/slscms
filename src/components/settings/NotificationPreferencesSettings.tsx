@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Bell, Mail, Smartphone, BellRing, Calendar, Receipt, Megaphone } from 'lucide-react';
+import { Bell, Mail, Smartphone, BellRing, FileText, Calendar, Receipt, Megaphone } from 'lucide-react';
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { usePushSubscription, useSubscribeToPush, useUnsubscribeFromPush } from '@/hooks/usePushNotifications';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,10 +36,8 @@ export function NotificationPreferencesSettings() {
 
   const notificationTypes = [
     { key: 'case_updates' as const, label: 'Case Updates', description: 'Status changes, new activities, assignments', icon: FileText },
-    { key: 'document_uploads' as const, label: 'Document Uploads', description: 'New documents uploaded to your cases', icon: FileText },
     { key: 'appointment_reminders' as const, label: 'Appointment Reminders', description: 'Upcoming appointment notifications', icon: Calendar },
     { key: 'invoice_alerts' as const, label: 'Invoice Alerts', description: 'New invoices and payment reminders', icon: Receipt },
-    { key: 'message_notifications' as const, label: 'Messages', description: 'New messages from clients or team', icon: MessageSquare },
     { key: 'system_announcements' as const, label: 'System Announcements', description: 'Important system updates and maintenance', icon: Megaphone },
   ];
 
