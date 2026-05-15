@@ -22,16 +22,12 @@ const features = [{
   title: 'Invoicing & Payments',
   description: 'Generate professional invoices, track payments, and manage billing efficiently.'
 }, {
-  icon: Shield,
-  title: 'Secure Documents',
-  description: 'Store and manage legal documents securely with role-based access controls.'
-}, {
   icon: BarChart3,
   title: 'Analytics & Reports',
   description: 'Gain insights with comprehensive reports and analytics dashboards.'
 }];
 
-const benefits = ['Streamlined client communication', 'Automated appointment reminders', 'Secure document management', 'Real-time case status tracking', 'Professional invoice generation', 'Team collaboration tools', 'Role-based access control', 'Expense tracking and budgets'];
+const benefits = ['Streamlined client communication', 'Automated appointment reminders', 'Real-time case status tracking', 'Professional invoice generation', 'Team collaboration tools', 'Role-based access control', 'Expense tracking and budgets', 'Income tax return management'];
 
 export default function Index() {
   return <div className="min-h-screen bg-background">

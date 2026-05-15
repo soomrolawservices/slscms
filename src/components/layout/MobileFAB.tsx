@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, X, Users, Briefcase, Calendar, FileText, Receipt, CreditCard } from 'lucide-react';
+import { Plus, X, Users, Briefcase, Calendar, Receipt, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -16,7 +16,6 @@ const fabActions: FABAction[] = [
   { icon: Users, label: 'New Client', path: '/clients?action=create', color: 'bg-blue-500' },
   { icon: Briefcase, label: 'New Case', path: '/cases?action=create', color: 'bg-green-500' },
   { icon: Calendar, label: 'Book Appointment', path: '/appointments?action=create', color: 'bg-purple-500' },
-  { icon: FileText, label: 'Upload Document', path: '/documents?action=create', color: 'bg-orange-500' },
   { icon: Receipt, label: 'Create Invoice', path: '/invoices?action=create', color: 'bg-pink-500', adminOnly: true },
   { icon: CreditCard, label: 'Record Payment', path: '/payments?action=create', color: 'bg-emerald-500' },
 ];

@@ -22,7 +22,7 @@ import { useState } from 'react';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavPreferences, ALL_NAV_ITEMS } from '@/hooks/useNavPreferences';
+import { useNavPreferences, ALL_NAV_ITEMS, ADMIN_ONLY_NAV_IDS } from '@/hooks/useNavPreferences';
 import { NavCustomizer } from './NavCustomizer';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 
@@ -43,12 +43,6 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Calculator,
 };
 
-// Admin-only nav items
-const adminOnlyItems = ['users', 'assignments'];
-
-// Team member available items
-const teamMemberItems = ['dashboard', 'clients', 'cases', 'payments', 'invoices', 'expenses', 'appointments', 'credentials', 'settings'];
-
 export function MobileNav() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [customizerOpen, setCustomizerOpen] = useState(false);
@@ -59,7 +53,7 @@ export function MobileNav() {
   // Filter nav items based on role
   const availableItemIds = isAdmin 
     ? ALL_NAV_ITEMS.map(item => item.id)
-    : teamMemberItems;
+    : ALL_NAV_ITEMS.filter(i => !ADMIN_ONLY_NAV_IDS.includes(i.id)).map(i => i.id);
 
   // Get selected tabs that are available for this user's role
   const visibleTabs = selectedTabs.filter(tab => availableItemIds.includes(tab.id));
