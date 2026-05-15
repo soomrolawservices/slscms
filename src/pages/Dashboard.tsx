@@ -1,4 +1,4 @@
-import { Users, Briefcase, Calendar, CreditCard, Plus, FileText, Receipt, Clock, TrendingUp, ArrowRight, Brain, Sparkles } from 'lucide-react';
+import { Users, Briefcase, Calendar, CreditCard, Plus, Receipt, Clock, TrendingUp, ArrowRight } from 'lucide-react';
 import { KpiCard } from '@/components/ui/kpi-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +10,6 @@ import { useClients } from '@/hooks/useClients';
 import { useCases } from '@/hooks/useCases';
 import { useAppointments } from '@/hooks/useAppointments';
 import { usePayments } from '@/hooks/usePayments';
-import { AIAnalytics } from '@/components/dashboard/AIAnalytics';
-import { AIAssistant } from '@/components/ai/AIAssistant';
 import { ExpenseBreakdownChart } from '@/components/dashboard/ExpenseBreakdownChart';
 import { FinancialSummaryCards } from '@/components/dashboard/FinancialSummaryCards';
 import { UnassignedCounters } from '@/components/dashboard/UnassignedCounters';
@@ -22,8 +20,6 @@ import { useState } from 'react';
 export default function Dashboard() {
   const { profile, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const [showAssistant, setShowAssistant] = useState(false);
   
   const clientsQuery = useClients();
   const { data: clients = [] } = clientsQuery;
@@ -42,7 +38,6 @@ export default function Dashboard() {
   const quickActions = [
     { label: 'Add Client', icon: Plus, variant: 'default' as const, path: '/clients', color: 'primary' },
     { label: 'New Case', icon: Briefcase, variant: 'default' as const, path: '/cases', color: 'success' },
-    { label: 'Upload Document', icon: FileText, variant: 'outline' as const, path: '/documents', color: 'info' },
     { label: 'Create Invoice', icon: Receipt, variant: 'outline' as const, path: '/invoices', color: 'warning' },
     { label: 'Schedule Appointment', icon: Calendar, variant: 'outline' as const, path: '/appointments', color: 'purple' },
   ];
@@ -64,30 +59,6 @@ export default function Dashboard() {
             Welcome back, <span className="font-medium text-foreground">{profile?.name}</span>
           </p>
         <div className="flex flex-wrap items-center gap-2">
-          {isAdmin && (
-            <>
-              <Button 
-                variant={showAssistant ? "default" : "outline"}
-                className="gap-2 text-xs sm:text-sm"
-                size="sm"
-                onClick={() => { setShowAssistant(!showAssistant); setShowAnalytics(false); }}
-              >
-                <Sparkles className="h-4 w-4" />
-                <span className="hidden sm:inline">{showAssistant ? 'Hide Assistant' : 'AI Assistant'}</span>
-                <span className="sm:hidden">AI</span>
-              </Button>
-              <Button 
-                variant={showAnalytics ? "default" : "outline"}
-                className="gap-2 text-xs sm:text-sm"
-                size="sm"
-                onClick={() => { setShowAnalytics(!showAnalytics); setShowAssistant(false); }}
-              >
-                <Brain className="h-4 w-4" />
-                <span className="hidden sm:inline">{showAnalytics ? 'Hide Analytics' : 'AI Analytics'}</span>
-                <span className="sm:hidden">Analytics</span>
-              </Button>
-            </>
-          )}
           <Button 
             variant="outline" 
             className="gap-2 text-xs sm:text-sm"
@@ -137,12 +108,6 @@ export default function Dashboard() {
           variant="warning"
         />
       </div>
-
-      {/* AI Analytics Section */}
-      {showAnalytics && <AIAnalytics />}
-      
-      {/* AI Assistant Section */}
-      {showAssistant && <AIAssistant />}
 
       {/* Quick Actions */}
       <Card className="border-0 shadow-md bg-gradient-to-br from-card to-muted/30 overflow-hidden">

@@ -2,7 +2,6 @@ import {
   LayoutDashboard, 
   Users, 
   Briefcase, 
-  FileText, 
   CreditCard, 
   Receipt,
   Wallet, 
@@ -10,13 +9,11 @@ import {
   Key, 
   UserCog,
   Settings,
-  Shield,
   LogOut,
   ChevronLeft,
   ChevronRight,
   UserPlus,
   BarChart3,
-  MessageSquare,
   Calculator
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -25,8 +22,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useITRPortalEnabled } from '@/hooks/useITRPortal';
-import { useUnreadMessagesCount } from '@/hooks/useUnreadMessages';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Tooltip,
@@ -38,17 +33,14 @@ const adminNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Clients', url: '/clients', icon: Users },
   { title: 'Cases', url: '/cases', icon: Briefcase },
-  { title: 'Documents', url: '/documents', icon: FileText },
   { title: 'Payments', url: '/payments', icon: CreditCard },
   { title: 'Invoices', url: '/invoices', icon: Receipt },
   { title: 'Expenses', url: '/expenses', icon: Wallet },
   { title: 'Appointments', url: '/appointments', icon: Calendar },
-  { title: 'Messages', url: '/messages', icon: MessageSquare },
   { title: 'Credentials', url: '/credentials', icon: Key },
   { title: 'Assignments', url: '/assignments', icon: UserPlus },
   { title: 'Reports', url: '/reports', icon: BarChart3 },
   { title: 'Users', url: '/users', icon: UserCog },
-  { title: 'Permissions', url: '/permissions', icon: Shield },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
@@ -56,11 +48,9 @@ const teamNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Clients', url: '/clients', icon: Users },
   { title: 'Cases', url: '/cases', icon: Briefcase },
-  { title: 'Documents', url: '/documents', icon: FileText },
   { title: 'Payments', url: '/payments', icon: CreditCard },
   { title: 'Expenses', url: '/expenses', icon: Wallet },
   { title: 'Appointments', url: '/appointments', icon: Calendar },
-  { title: 'Messages', url: '/messages', icon: MessageSquare },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
@@ -68,7 +58,6 @@ export function AppSidebar() {
   const { user, profile, isAdmin, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const { data: itrEnabled } = useITRPortalEnabled();
-  const { data: unreadMessages = 0 } = useUnreadMessagesCount();
   const location = useLocation();
 
   const baseNavItems = isAdmin ? adminNavItems : teamNavItems;
@@ -78,7 +67,6 @@ export function AppSidebar() {
     : baseNavItems;
 
   const NavItem = ({ item }: { item: typeof navItems[0] }) => {
-    const showBadge = item.url === '/messages' && unreadMessages > 0;
     const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + '/');
 
     const content = (
@@ -94,17 +82,6 @@ export function AppSidebar() {
       >
         <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0", collapsed && "h-5 w-5")} />
         {!collapsed && <span className="truncate">{item.title}</span>}
-        {showBadge && (
-          <Badge 
-            variant="destructive" 
-            className={cn(
-              "h-5 min-w-[1.25rem] text-xs flex items-center justify-center",
-              collapsed ? "absolute -top-1 -right-1" : "ml-auto"
-            )}
-          >
-            {unreadMessages > 99 ? '99+' : unreadMessages}
-          </Badge>
-        )}
       </NavLink>
     );
 
@@ -114,7 +91,6 @@ export function AppSidebar() {
           <TooltipTrigger asChild>{content}</TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
             {item.title}
-            {showBadge && ` (${unreadMessages})`}
           </TooltipContent>
         </Tooltip>
       );

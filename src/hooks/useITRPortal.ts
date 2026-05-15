@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -303,6 +304,24 @@ export function useITRExtensions(fiscalYearId?: string) {
 
 // ITR Portal Setting
 export function useITRPortalEnabled() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('signup-settings-itr')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'signup_settings', filter: 'setting_key=eq.itr_portal_enabled' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['itr-portal-enabled'] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['itr-portal-enabled'],
     queryFn: async () => {
@@ -315,6 +334,7 @@ export function useITRPortalEnabled() {
       if (error) throw error;
       return data?.setting_value ?? false;
     },
+    staleTime: 0,
   });
 }
 

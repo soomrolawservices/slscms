@@ -10,7 +10,6 @@ import { toast } from '@/hooks/use-toast';
 import { useSignupSettings, useUpdateSignupSetting } from '@/hooks/useSignupSettings';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { NotificationPreferencesSettings } from '@/components/settings/NotificationPreferencesSettings';
 import { BroadcastManager } from '@/components/broadcasts/BroadcastManager';
 import { FormBuilder } from '@/components/forms/FormBuilder';
 import { TOTPSetup } from '@/components/security/TOTPSetup';
@@ -62,13 +61,6 @@ export default function Settings() {
     }
   };
 
-  const handleDropdownSave = () => {
-    toast({
-      title: 'Dropdowns updated',
-      description: 'Dropdown options have been saved.',
-    });
-  };
-
   const handleSignupToggle = (key: string, value: boolean) => {
     updateSignupSetting.mutate({ key, value });
   };
@@ -88,13 +80,11 @@ export default function Settings() {
       <Tabs defaultValue="account" className="space-y-6">
         <TabsList className="border-2 border-border flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           {isAdmin && <TabsTrigger value="broadcasts">Broadcasts</TabsTrigger>}
           {isAdmin && <TabsTrigger value="forms">Forms</TabsTrigger>}
           {isAdmin && <TabsTrigger value="signups">Signup Controls</TabsTrigger>}
           {isAdmin && <TabsTrigger value="portals">Portals</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="dropdowns">Dropdowns</TabsTrigger>}
         </TabsList>
 
         {/* Account Settings */}
@@ -138,11 +128,6 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Notification Preferences */}
-        <TabsContent value="notifications">
-          <NotificationPreferencesSettings />
         </TabsContent>
 
         {/* Security Settings */}
@@ -294,57 +279,6 @@ export default function Settings() {
         )}
 
         {/* Dropdown Editor - Admin Only */}
-        {isAdmin && (
-          <TabsContent value="dropdowns">
-            <Card className="border-2 border-border">
-              <CardHeader className="border-b-2 border-border">
-                <CardTitle>Dropdown Options Editor</CardTitle>
-                <CardDescription>
-                  Manage dropdown options used throughout the application
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-6">
-                <div className="grid gap-4 max-w-lg">
-                  <div className="grid gap-2">
-                    <Label>Case Types</Label>
-                    <Input defaultValue="Civil, Criminal, Family, Corporate, Property, Immigration" />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated list of case types
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label>Client Regions</Label>
-                    <Input defaultValue="North, South, East, West, Central" />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated list of regions
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label>Document Types</Label>
-                    <Input defaultValue="Contract, Agreement, Court Filing, Evidence, ID Document, Certificate" />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated list of document types
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label>Expense Categories</Label>
-                    <Input defaultValue="Travel, Office Supplies, Court Fees, Consultation, Software, Other" />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated list of expense categories
-                    </p>
-                  </div>
-
-                  <Button onClick={handleDropdownSave} className="w-fit">
-                    Save Dropdown Options
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );
