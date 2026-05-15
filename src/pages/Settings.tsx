@@ -279,57 +279,6 @@ export default function Settings() {
         )}
 
         {/* Dropdown Editor - Admin Only */}
-        {isAdmin && (
-          <TabsContent value="dropdowns">
-            <Card className="border-2 border-border">
-              <CardHeader className="border-b-2 border-border">
-                <CardTitle>Dropdown Options Editor</CardTitle>
-                <CardDescription>
-                  Manage dropdown options used throughout the application
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-6">
-                <div className="grid gap-4 max-w-lg">
-                  <div className="grid gap-2">
-                    <Label>Case Types</Label>
-                    <Input defaultValue="Civil, Criminal, Family, Corporate, Property, Immigration" />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated list of case types
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label>Client Regions</Label>
-                    <Input defaultValue="North, South, East, West, Central" />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated list of regions
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label>Document Types</Label>
-                    <Input defaultValue="Contract, Agreement, Court Filing, Evidence, ID Document, Certificate" />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated list of document types
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label>Expense Categories</Label>
-                    <Input defaultValue="Travel, Office Supplies, Court Fees, Consultation, Software, Other" />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated list of expense categories
-                    </p>
-                  </div>
-
-                  <Button onClick={handleDropdownSave} className="w-fit">
-                    Save Dropdown Options
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );

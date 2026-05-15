@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Mail, Phone, MapPin, CreditCard, Briefcase, FileText, Calendar, Edit } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, MapPin, CreditCard, Briefcase, Calendar, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,7 +9,6 @@ import { useClients } from '@/hooks/useClients';
 import { useCases } from '@/hooks/useCases';
 import { usePayments } from '@/hooks/usePayments';
 import { useInvoices } from '@/hooks/useInvoices';
-import { useDocuments } from '@/hooks/useDocuments';
 import { useAppointments } from '@/hooks/useAppointments';
 import { format } from 'date-fns';
 
@@ -21,7 +20,6 @@ export default function ClientDetails() {
   const { data: cases = [] } = useCases();
   const { data: payments = [] } = usePayments();
   const { data: invoices = [] } = useInvoices();
-  const { data: documents = [] } = useDocuments();
   const { data: appointments = [] } = useAppointments();
 
   const client = clients.find(c => c.id === clientId);
@@ -44,7 +42,6 @@ export default function ClientDetails() {
   const clientCases = (cases as any[]).filter(c => c.client_id === clientId);
   const clientPayments = payments.filter(p => p.client_id === clientId);
   const clientInvoices = invoices.filter(i => i.client_id === clientId);
-  const clientDocuments = documents.filter(d => d.client_id === clientId);
   const clientAppointments = appointments.filter(a => a.client_id === clientId);
 
   const totalPaid = clientPayments
@@ -89,15 +86,6 @@ export default function ClientDetails() {
               <span>Cases</span>
             </div>
             <p className="text-2xl font-bold mt-1">{clientCases.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-2 border-border">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <FileText className="h-4 w-4" />
-              <span>Documents</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{clientDocuments.length}</p>
           </CardContent>
         </Card>
         <Card className="border-2 border-border">
@@ -166,7 +154,6 @@ export default function ClientDetails() {
               <TabsList className="w-full justify-start border-2 border-border">
                 <TabsTrigger value="cases">Cases ({clientCases.length})</TabsTrigger>
                 <TabsTrigger value="payments">Payments ({clientPayments.length})</TabsTrigger>
-                <TabsTrigger value="documents">Documents ({clientDocuments.length})</TabsTrigger>
                 <TabsTrigger value="appointments">Appointments ({clientAppointments.length})</TabsTrigger>
               </TabsList>
             </CardHeader>
@@ -219,32 +206,6 @@ export default function ClientDetails() {
                             <div className="text-right">
                               <p className="font-semibold">Rs. {payment.amount.toLocaleString()}</p>
                               <StatusBadge status={payment.status} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </TabsContent>
-
-              <TabsContent value="documents" className="mt-0">
-                <ScrollArea className="h-[300px]">
-                  {clientDocuments.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No documents found</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {clientDocuments.map((doc) => (
-                        <div key={doc.id} className="p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium">{doc.title}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {doc.document_type || 'Document'} • {format(new Date(doc.created_at), 'MMM d, yyyy')}
-                              </p>
                             </div>
                           </div>
                         </div>
