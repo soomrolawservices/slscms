@@ -4,18 +4,15 @@ import {
   Briefcase, 
   Calendar, 
   MoreHorizontal,
-  FileText,
   CreditCard,
   Receipt,
   Key,
   UserCog,
-  Shield,
   Settings,
   LogOut,
   Wallet,
   UserPlus,
   BarChart3,
-  MessageSquare,
   Sliders,
   Calculator
 } from 'lucide-react';
@@ -35,25 +32,22 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Users,
   Briefcase,
   Calendar,
-  FileText,
   CreditCard,
   Receipt,
   Key,
   UserCog,
-  Shield,
   Settings,
   Wallet,
   UserPlus,
   BarChart3,
-  MessageSquare,
   Calculator,
 };
 
 // Admin-only nav items
-const adminOnlyItems = ['users', 'permissions', 'assignments'];
+const adminOnlyItems = ['users', 'assignments'];
 
 // Team member available items
-const teamMemberItems = ['dashboard', 'clients', 'cases', 'documents', 'payments', 'invoices', 'expenses', 'appointments', 'messages', 'credentials', 'settings'];
+const teamMemberItems = ['dashboard', 'clients', 'cases', 'payments', 'invoices', 'expenses', 'appointments', 'credentials', 'settings'];
 
 export function MobileNav() {
   const [drawerOpen, setDrawerOpen] = useState(false);

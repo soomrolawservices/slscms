@@ -10,7 +10,6 @@ import { toast } from '@/hooks/use-toast';
 import { useSignupSettings, useUpdateSignupSetting } from '@/hooks/useSignupSettings';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { NotificationPreferencesSettings } from '@/components/settings/NotificationPreferencesSettings';
 import { BroadcastManager } from '@/components/broadcasts/BroadcastManager';
 import { FormBuilder } from '@/components/forms/FormBuilder';
 import { TOTPSetup } from '@/components/security/TOTPSetup';
@@ -62,13 +61,6 @@ export default function Settings() {
     }
   };
 
-  const handleDropdownSave = () => {
-    toast({
-      title: 'Dropdowns updated',
-      description: 'Dropdown options have been saved.',
-    });
-  };
-
   const handleSignupToggle = (key: string, value: boolean) => {
     updateSignupSetting.mutate({ key, value });
   };
@@ -88,13 +80,11 @@ export default function Settings() {
       <Tabs defaultValue="account" className="space-y-6">
         <TabsList className="border-2 border-border flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           {isAdmin && <TabsTrigger value="broadcasts">Broadcasts</TabsTrigger>}
           {isAdmin && <TabsTrigger value="forms">Forms</TabsTrigger>}
           {isAdmin && <TabsTrigger value="signups">Signup Controls</TabsTrigger>}
           {isAdmin && <TabsTrigger value="portals">Portals</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="dropdowns">Dropdowns</TabsTrigger>}
         </TabsList>
 
         {/* Account Settings */}
@@ -138,11 +128,6 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Notification Preferences */}
-        <TabsContent value="notifications">
-          <NotificationPreferencesSettings />
         </TabsContent>
 
         {/* Security Settings */}

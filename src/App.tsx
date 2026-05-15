@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { OnboardingWizard, useOnboardingForUser } from "@/components/onboarding/OnboardingWizard";
-import { VoiceFAB } from "@/components/voice/VoiceFAB";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { usePrefetchCriticalData } from "@/hooks/usePrefetchCriticalData";
@@ -20,20 +19,19 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
 import Cases from "./pages/Cases";
-import Documents from "./pages/Documents";
 import Payments from "./pages/Payments";
 import Invoices from "./pages/Invoices";
 import Expenses from "./pages/Expenses";
 import Appointments from "./pages/Appointments";
 import Credentials from "./pages/Credentials";
 import Users from "./pages/Users";
-import Permissions from "./pages/Permissions";
 import Settings from "./pages/Settings";
 import Assignments from "./pages/Assignments";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
-import Messages from "./pages/Messages";
 import Index from "./pages/Index";
+import PublicForms from "./pages/PublicForms";
+import PublicFormFill from "./pages/PublicFormFill";
 import NotFound from "./pages/NotFound";
 
 // ITR Portal
@@ -72,13 +70,15 @@ function AppContent() {
       )}
       <Toaster />
       <Sonner />
-      {isAuthenticated && <VoiceFAB />}
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          {/* Public form routes (no auth required) */}
+          <Route path="/forms" element={<PublicForms />} />
+          <Route path="/forms/:formId" element={<PublicFormFill />} />
           
           {/* Protected Routes */}
           <Route element={<AppLayout />}>
@@ -103,11 +103,6 @@ function AppContent() {
                 <Cases />
               </ProtectedRoute>
             } />
-            <Route path="/documents" element={
-              <ProtectedRoute allowedRoles={['admin', 'team_member']}>
-                <Documents />
-              </ProtectedRoute>
-            } />
             <Route path="/payments" element={
               <ProtectedRoute allowedRoles={['admin', 'team_member']}>
                 <Payments />
@@ -121,11 +116,6 @@ function AppContent() {
             <Route path="/appointments" element={
               <ProtectedRoute allowedRoles={['admin', 'team_member']}>
                 <Appointments />
-              </ProtectedRoute>
-            } />
-            <Route path="/messages" element={
-              <ProtectedRoute allowedRoles={['admin', 'team_member']}>
-                <Messages />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={
@@ -153,11 +143,6 @@ function AppContent() {
             <Route path="/users" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <Users />
-              </ProtectedRoute>
-            } />
-            <Route path="/permissions" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Permissions />
               </ProtectedRoute>
             } />
             <Route path="/assignments" element={

@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { SkipToMain } from '@/components/accessibility/SkipToMain';
 import { BroadcastDisplay } from '@/components/broadcasts/BroadcastDisplay';
-import { GlobalSearch } from '@/components/search/GlobalSearch';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { PendingChangesIndicator } from '@/components/pwa/PendingChangesIndicator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,7 +38,6 @@ export function AppLayout() {
         {/* Desktop Header */}
         <header className="hidden lg:flex items-center justify-between gap-4 h-14 px-6 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-40">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <GlobalSearch />
             {profile && (
               <span className="text-sm text-muted-foreground hidden xl:inline truncate">
                 Welcome, <span className="font-medium text-foreground">{profile.name}</span>
