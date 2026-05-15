@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Bell, Mail, MessageSquare, Smartphone, BellRing, FileText, Calendar, Receipt, Megaphone } from 'lucide-react';
+import { Bell, Mail, Smartphone, BellRing, Calendar, Receipt, Megaphone } from 'lucide-react';
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { usePushSubscription, useSubscribeToPush, useUnsubscribeFromPush } from '@/hooks/usePushNotifications';
 import { Skeleton } from '@/components/ui/skeleton';
