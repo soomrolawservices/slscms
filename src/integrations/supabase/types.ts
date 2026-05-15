@@ -668,7 +668,7 @@ export type Database = {
           form_id: string
           id: string
           submitted_at: string
-          submitted_by: string
+          submitted_by: string | null
         }
         Insert: {
           assignment_id?: string | null
@@ -677,7 +677,7 @@ export type Database = {
           form_id: string
           id?: string
           submitted_at?: string
-          submitted_by: string
+          submitted_by?: string | null
         }
         Update: {
           assignment_id?: string | null
@@ -686,7 +686,7 @@ export type Database = {
           form_id?: string
           id?: string
           submitted_at?: string
-          submitted_by?: string
+          submitted_by?: string | null
         }
         Relationships: [
           {
